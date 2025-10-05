@@ -1,0 +1,87 @@
+/* FILE: src/components/Header/Header.module.css */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--primary);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.brand {
+  font-family: 'Lora', serif;
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: none;
+  gap: 1rem;
+}
+
+.link {
+  font-family: 'Montserrat', sans-serif;
+  color: #F3F7F7;
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+}
+
+.link:hover, .link:focus {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.cartButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cartButton:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--wine);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .nav {
+    display: flex;
+  }
+}

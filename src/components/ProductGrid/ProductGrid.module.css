@@ -1,0 +1,185 @@
+/* FILE: src/components/ProductGrid/ProductGrid.module.css */
+
+.section {
+  padding: 6rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.title {
+  font-family: 'Lora', serif;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  color: var(--wine);
+  text-align: center;
+  margin-bottom: 2.5rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 3rem;
+  justify-items: center;
+}
+
+.productCard {
+  width: 100%;
+  max-width: 380px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.productCard.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Efeito masonry assimétrico */
+.productCard:nth-child(2n) {
+  transform: translateY(60px);
+}
+
+.productCard:nth-child(3n) {
+  transform: translateY(40px);
+}
+
+.productCard.visible:nth-child(2n),
+.productCard.visible:nth-child(3n) {
+  transform: translateY(0);
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  border-radius: var(--radius) var(--radius) 8px 8px;
+  background-color: #F2F4F4;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%);
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.cta {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.75);
+  color: #fff;
+  background: rgba(0,0,0,0.15);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0.2rem 0;
+}
+
+.cta:hover { background: rgba(0,0,0,0.25); }
+
+.primary { 
+  background: var(--wine);
+  border-color: var(--wine);
+}
+
+.primary:hover { background: #5e0b0d; }
+
+.productCard:hover .image {
+  transform: scale(1.08);
+}
+
+.productCard:hover .overlay {
+  opacity: 1;
+}
+
+.productCard:focus {
+  outline: 2px solid rgba(95, 138, 139, 0.6);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.productCard:focus .overlay {
+  opacity: 1;
+}
+
+.info {
+  padding: 1.5rem 0.5rem 0;
+  text-align: center;
+}
+
+.productName {
+  font-family: 'Lora', serif;
+  font-size: 1.2rem;
+  color: var(--ink);
+  margin: 0 0 0.25rem 0;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.productCard:hover .productName { color: var(--wine); }
+
+.price {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  color: var(--wine);
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section {
+    padding: 4rem 1.5rem;
+  }
+
+  .title {
+    font-size: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  .productCard:nth-child(2n),
+  .productCard:nth-child(3n) {
+    transform: translateY(50px);
+  }
+
+  .productCard.visible:nth-child(2n),
+  .productCard.visible:nth-child(3n) {
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

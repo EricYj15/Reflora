@@ -1,0 +1,87 @@
+/* FILE: src/App.css */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+/* Theme Tokens */
+:root {
+  --bg: #FAFAF8; /* fundo claro e delicado */
+  --surface: #FFFFFF; /* cartões/superfícies */
+  --ink: #2E2E2B; /* texto principal */
+  --muted-ink: #5A5A54; /* texto secundário */
+  --primary: #5F8A8B; /* Verde/azulado da sua logo */
+  --wine: #7B0F12; /* vinho profundo derivado da sua logo */
+  --accent: var(--wine);
+  --border: #E7E7E2; /* bordas suaves */
+  --shadow: 0 6px 24px rgba(0,0,0,0.06);
+  --radius: 12px;
+}
+
+/* App Container */
+.App {
+  min-height: 100vh;
+  background-color: var(--bg);
+  position: relative;
+  overflow-x: hidden;
+  color: var(--ink);
+}
+
+/* Background ornament (single, centered) */
+.App::before {
+  content: '';
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(78vw, 820px);
+  height: min(78vw, 820px);
+  background: url('./assets/ornament.png') center/contain no-repeat;
+  opacity: 0.09;
+  pointer-events: none;
+  z-index: 0; /* behind app children */
+}
+
+.App::before { top: 108px; }
+
+/* Ensure all direct children paint above background ornament */
+.App > * { position: relative; z-index: 2; }
+
+@media (max-width: 992px) {
+  .App::before {
+    width: min(86vw, 680px);
+    height: min(86vw, 680px);
+    opacity: 0.085;
+    top: 96px;
+  }
+}
+
+@media (max-width: 600px) {
+  .App::before {
+    width: min(92vw, 460px);
+    height: min(92vw, 460px);
+    opacity: 0.07;
+    top: 88px;
+  }
+}
+
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #3a5f60;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #BFD0D0; /* tom claro do verde */
+  border-radius: 6px;
+}
+
+/* Selection Color */
+::selection { background: rgba(123, 15, 18, 0.12); color: var(--ink); }
+::-moz-selection { background: rgba(123, 15, 18, 0.12); color: var(--ink); }

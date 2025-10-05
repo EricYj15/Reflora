@@ -1,0 +1,70 @@
+// FILE: src/data/products.js
+
+export const products = [
+  {
+    id: 1,
+    name: "Jaqueta Noturna",
+    price: "R$ 189,00",
+    description: "Uma jaqueta jeans transformada com bordados artesanais inspirados em constelações. Cada ponto conta uma história de renascimento.",
+    images: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800",
+      "https://images.unsplash.com/photo-1543076659-9380cdf10613?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-1"
+  },
+  {
+    id: 2,
+    name: "Vestido Eclipse",
+    price: "R$ 245,00",
+    description: "Um vestido único criado a partir de tecidos vintage, tingido à mão com cores que evocam o crepúsculo. Peça exclusiva.",
+    images: [
+      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800",
+      "https://images.unsplash.com/photo-1596783074918-c84cb06531ca?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-2"
+  },
+  {
+    id: 3,
+    name: "Camisa Estelar",
+    price: "R$ 156,00",
+    description: "Camisa oversized ressignificada com aplicações de tecido e pinturas à mão. Conforto e arte em uma só peça.",
+    images: [
+      "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800",
+      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-3"
+  },
+  {
+    id: 4,
+    name: "Calça Lua Cheia",
+    price: "R$ 178,00",
+    description: "Jeans wide leg vintage, cuidadosamente restaurado e customizado com detalhes que celebram a imperfeição.",
+    images: [
+      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800",
+      "https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-4"
+  },
+  {
+    id: 5,
+    name: "Blazer Constelação",
+    price: "R$ 267,00",
+    description: "Blazer atemporal reinterpretado com forro substituído por tecido sustentável e detalhes metálicos artesanais.",
+    images: [
+      "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800",
+      "https://images.unsplash.com/photo-1594938291221-94f18cbb5660?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-5"
+  },
+  {
+    id: 6,
+    name: "Saia Aurora",
+    price: "R$ 198,00",
+    description: "Saia midi criada a partir de retalhos nobres, formando um patchwork poético que celebra a diversidade de texturas.",
+    images: [
+      "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=800",
+      "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=800"
+    ],
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-6"
+  }
+];

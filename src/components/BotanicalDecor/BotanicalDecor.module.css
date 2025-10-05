@@ -1,0 +1,10 @@
+/* FILE: src/components/BotanicalDecor/BotanicalDecor.module.css */
+
+.decor {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  color: var(--wine);
+  opacity: 0.24;
+}

@@ -1,0 +1,111 @@
+/* FILE: src/components/Manifesto/Manifesto.module.css */
+
+.section {
+  padding: 8rem 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.content {
+  text-align: center;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: var(--shadow);
+}
+
+.content::before {
+  content: '';
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(123, 15, 18, 0.45), transparent);
+}
+
+.title {
+  font-family: 'Lora', serif;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  color: var(--wine);
+  margin-bottom: 2.25rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+
+.text p {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  color: var(--ink);
+  line-height: 1.9;
+  margin: 0;
+  opacity: 1;
+  font-weight: 400;
+}
+
+.text p strong {
+  color: var(--wine);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.signature {
+  font-style: italic;
+  color: var(--wine) !important;
+  font-size: clamp(1.2rem, 2.5vw, 1.5rem) !important;
+  margin-top: 1.25rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em;
+}
+
+.content::after {
+  content: '';
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(123, 15, 18, 0.45), transparent);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .section {
+    padding: 6rem 1.5rem;
+  }
+
+  .title {
+    margin-bottom: 2rem;
+  }
+
+  .text {
+    gap: 1.5rem;
+  }
+
+  .text p {
+    font-size: 1.08rem;
+  }
+
+  .signature {
+    font-size: 1.18rem !important;
+    margin-top: 1.2rem !important;
+  }
+}

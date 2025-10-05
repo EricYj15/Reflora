@@ -1,0 +1,123 @@
+/* FILE: src/components/Hero/Hero.module.css */
+
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.content {
+  text-align: center;
+  z-index: 1;
+}
+
+.logoContainer {
+  margin-bottom: 2rem;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.9;
+  }
+}
+
+.logo {
+  font-family: 'Lora', serif;
+  font-size: clamp(3.4rem, 10vw, 6.2rem);
+  font-weight: 600;
+  color: var(--wine);
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 16px rgba(123, 15, 18, 0.16);
+}
+
+.slogan {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(1rem, 2.4vw, 1.4rem);
+  color: #4a4a46;
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  animation: fadeIn 2s ease-in;
+}
+
+/* creative underline accent under the logo */
+.logoContainer::after {
+  content: '';
+  display: block;
+  width: min(280px, 36vw);
+  height: 10px;
+  margin: 14px auto 0;
+  background: radial-gradient(ellipse at center, rgba(123,15,18,0.35) 0%, rgba(123,15,18,0.08) 60%, transparent 70%);
+  filter: blur(1px);
+  border-radius: 999px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scrollArrow {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: pointer;
+  animation: bounce 2s infinite;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+}
+
+.scrollArrow:hover {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.12));
+}
+
+.scrollArrow:focus {
+  outline: 2px solid rgba(95, 138, 139, 0.6);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  40% {
+    transform: translateX(-50%) translateY(-10px);
+  }
+  60% {
+    transform: translateX(-50%) translateY(-5px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .logo {
+    font-size: 3.5rem;
+  }
+
+  .slogan {
+    font-size: 1rem;
+  }
+
+  .scrollArrow {
+    bottom: 2rem;
+  }
+}
