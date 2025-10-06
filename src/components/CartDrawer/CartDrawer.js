@@ -3,7 +3,7 @@
 import React from 'react';
 import styles from './CartDrawer.module.css';
 
-const CartDrawer = ({ open, items, onClose, onRemove, onIncrement, onDecrement }) => {
+const CartDrawer = ({ open, items, onClose, onRemove, onIncrement, onDecrement, onCheckout }) => {
   const subtotal = items.reduce((sum, item) => sum + item.priceValue * item.quantity, 0);
 
   return (
@@ -45,7 +45,21 @@ const CartDrawer = ({ open, items, onClose, onRemove, onIncrement, onDecrement }
             <span>Subtotal</span>
             <strong>R$ {subtotal.toFixed(2)}</strong>
           </div>
-          <a href="https://checkout.seu-gateway.com" target="_blank" rel="noreferrer" className={styles.checkout}>Finalizar compra</a>
+          <p className={styles.notice}>
+            Pagamento seguro: revise seus itens e finalize para gerar o QR Code PIX com garantia Reflora.
+          </p>
+          <button
+            type="button"
+            className={styles.checkout}
+            disabled={items.length === 0}
+            onClick={() => {
+              if (!items.length) return;
+              onClose();
+              onCheckout?.();
+            }}
+          >
+            Finalizar compra
+          </button>
         </div>
       </aside>
     </div>

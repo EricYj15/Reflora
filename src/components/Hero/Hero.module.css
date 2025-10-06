@@ -51,18 +51,6 @@
   animation: fadeIn 2s ease-in;
 }
 
-/* creative underline accent under the logo */
-.logoContainer::after {
-  content: '';
-  display: block;
-  width: min(280px, 36vw);
-  height: 10px;
-  margin: 14px auto 0;
-  background: radial-gradient(ellipse at center, rgba(123,15,18,0.35) 0%, rgba(123,15,18,0.08) 60%, transparent 70%);
-  filter: blur(1px);
-  border-radius: 999px;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;

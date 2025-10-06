@@ -1,48 +1,117 @@
 /* FILE: src/components/Header/Header.module.css */
 
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 50;
-  background: var(--primary);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  left: 0;
+  right: 0;
+  z-index: 80;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(95, 138, 139, 0.12);
+  box-shadow: 0 10px 28px rgba(47, 77, 78, 0.12);
+  transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+@supports not (backdrop-filter: blur(18px)) {
+  .header {
+    background: rgba(255, 255, 255, 0.94);
+  }
 }
 
 .inner {
-  max-width: 1200px;
+  width: min(100%, 1160px);
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: clamp(0.75rem, 2vw, 1.75rem);
+  padding: clamp(0.65rem, 1.4vw, 1rem) clamp(1.1rem, 2.4vw, 2rem);
 }
 
 .brand {
   font-family: 'Lora', serif;
   font-weight: 600;
-  font-size: 1.5rem;
-  color: #fff;
-  text-decoration: none;
-  letter-spacing: 0.02em;
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wine);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.brand::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--wine), rgba(95, 138, 139, 0.9));
+  box-shadow: 0 0 6px rgba(123, 15, 18, 0.28);
+}
+
+.brand span {
+  display: inline-block;
+  letter-spacing: inherit;
+}
+
+.brand:focus-visible {
+  outline: 2px solid rgba(123, 15, 18, 0.35);
+  outline-offset: 4px;
+  border-radius: 999px;
 }
 
 .nav {
   display: none;
-  gap: 1rem;
+  align-items: center;
+  gap: clamp(0.75rem, 1.8vw, 1.75rem);
 }
 
 .link {
   font-family: 'Montserrat', sans-serif;
-  color: #F3F7F7;
+  font-weight: 500;
+  color: rgba(46, 46, 43, 0.72);
   text-decoration: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
+  letter-spacing: 0.05em;
+  position: relative;
+  padding: 0.35rem 0;
+  transition: color 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  appearance: none;
 }
 
-.link:hover, .link:focus {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+.link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(95, 138, 139, 0), rgba(95, 138, 139, 0.85), rgba(123, 15, 18, 0.85), rgba(123, 15, 18, 0));
+  transform: scaleX(0.25);
+  transform-origin: center;
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.link:hover,
+.link:focus {
+  color: var(--ink);
+}
+
+.link:hover::after,
+.link:focus::after {
+  opacity: 1;
+  transform: scaleX(1);
 }
 
 .cartButton {
@@ -51,17 +120,24 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08);
-  color: #fff;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 138, 139, 0.24);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--primary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .cartButton:hover {
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 22px rgba(95, 138, 139, 0.18);
+}
+
+.cartButton:focus-visible {
+  outline: 2px solid rgba(95, 138, 139, 0.5);
+  outline-offset: 4px;
 }
 
 .badge {
@@ -83,5 +159,15 @@
 @media (min-width: 768px) {
   .nav {
     display: flex;
+  }
+}
+
+@media (max-width: 767px) {
+  .inner {
+    padding: 0.65rem 1.1rem;
+  }
+
+  .cartButton {
+    padding: 0.45rem 0.85rem;
   }
 }

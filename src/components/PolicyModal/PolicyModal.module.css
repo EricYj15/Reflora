@@ -1,0 +1,184 @@
+/* FILE: src/components/PolicyModal/PolicyModal.module.css */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 35, 34, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  z-index: 999;
+}
+
+.modal {
+  background: var(--surface, #ffffff);
+  border-radius: 24px;
+  width: min(900px, 100%);
+  max-height: min(85vh, 720px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(95, 138, 139, 0.18);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 4vw, 2.5rem) 1.25rem;
+  border-bottom: 1px solid rgba(95, 138, 139, 0.12);
+}
+
+.header h2 {
+  margin: 0;
+  font-family: 'Lora', serif;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  color: var(--ink, #1f2a2a);
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: rgba(31, 42, 42, 0.6);
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.closeButton:hover {
+  color: rgba(31, 42, 42, 0.9);
+  transform: scale(1.05);
+}
+
+.content {
+  padding: 0 clamp(1.5rem, 4vw, 2.5rem);
+  overflow-y: auto;
+  flex: 1;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.block {
+  background: rgba(95, 138, 139, 0.06);
+  border-radius: 18px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid rgba(95, 138, 139, 0.15);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.block h3,
+.timeline h3 {
+  margin: 0;
+  font-family: 'Lora', serif;
+  color: var(--ink, #1f2a2a);
+  font-size: 1.2rem;
+}
+
+.block ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  color: var(--muted-ink, rgba(46, 46, 43, 0.75));
+}
+
+.timeline {
+  border-radius: 18px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid rgba(95, 138, 139, 0.15);
+  background: rgba(255, 255, 255, 0.75);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.timeline ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  color: var(--muted-ink, rgba(46, 46, 43, 0.75));
+}
+
+.footer {
+  padding: 1.5rem clamp(1.5rem, 4vw, 2.5rem) clamp(1.75rem, 3vw, 2.2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  border-top: 1px solid rgba(95, 138, 139, 0.12);
+}
+
+.contactBox {
+  background: rgba(95, 138, 139, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  font-family: 'Montserrat', sans-serif;
+  display: grid;
+  gap: 0.4rem;
+  color: var(--muted-ink, rgba(46, 46, 43, 0.75));
+}
+
+.contactBox h3 {
+  margin: 0;
+  font-family: 'Lora', serif;
+  color: var(--ink, #1f2a2a);
+  font-size: 1.05rem;
+}
+
+.contactBox a {
+  color: var(--primary, #5f8a8b);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.contactBox a:hover {
+  text-decoration: underline;
+}
+
+.actionButton {
+  align-self: flex-end;
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.5rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary, #5f8a8b);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(95, 138, 139, 0.28);
+}
+
+@media (max-width: 640px) {
+  .modal {
+    border-radius: 20px;
+  }
+
+  .content {
+    padding: 0 1.25rem;
+  }
+
+  .header,
+  .footer {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .actionButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

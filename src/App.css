@@ -24,6 +24,7 @@
   position: relative;
   overflow-x: hidden;
   color: var(--ink);
+  padding-top: clamp(4.5rem, 12vw, 6rem);
 }
 
 /* Background ornament (single, centered) */

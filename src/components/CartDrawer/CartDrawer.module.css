@@ -103,15 +103,42 @@
 
 .subtotal { display: flex; align-items: center; justify-content: space-between; color: var(--ink); }
 
+.notice {
+  margin: 0.35rem 0 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(46, 46, 43, 0.7);
+  line-height: 1.4;
+}
+
 .checkout {
   display: inline-block;
+  width: 100%;
   text-align: center;
   padding: 0.9rem 1rem;
   background: var(--primary);
   color: #fff;
-  text-decoration: none;
+  border: none;
   border-radius: 10px;
   box-shadow: var(--shadow);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.checkout:hover { background: #4f7373; }
+.checkout:hover {
+  background: #4f7373;
+  transform: translateY(-1px);
+}
+
+.checkout:focus-visible {
+  outline: 2px solid rgba(95, 138, 139, 0.55);
+  outline-offset: 3px;
+}
+
+.checkout:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}

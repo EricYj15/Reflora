@@ -38,30 +38,29 @@ const Manifesto = () => {
     >
       <div className={styles.content}>
         <h2 className={styles.title}>Nosso Manifesto</h2>
-        
+
         <div className={styles.text}>
           <p>
-            Em um mundo que descarta, nós escolhemos renovar.
+            Não somos uma fábrica; somos um pequeno jardim de costuras conduzido à mão.
+            Cada lote nasce aos poucos, entre conversas, café e linhas reutilizadas.
           </p>
           <p>
-            Cada peça que floresce em nossas mãos carrega uma história — 
-            tecidos esquecidos que encontram nova vida, 
-            costuras que unem passado e futuro, 
-            cores que renascem sob o toque do artesanal.
+            Recolhemos tecidos rejeitados, mapeamos suas cicatrizes e decidimos quais
+            histórias eles ainda carregam. Depois, transformamos em peças que respeitam a
+            origem de cada fibra, sem esconder marcas do tempo.
           </p>
           <p>
-            <strong>Reflora</strong> é mais que moda. 
-            É um convite para desacelerar, 
-            para valorizar o único, 
-            para vestir-se de propósito.
+            <strong>Reflora</strong> acredita que autenticidade floresce da transparência:
+            você sabe de onde veio, quem fez e quantas horas dedicamos à sua peça.
+            Não há estoques infinitos nem coleções apressadas; há cuidado e intenção.
           </p>
           <p>
-            Aqui, cada imperfeição é celebrada. 
-            Cada peça é uma flor noturna — 
-            rara, misteriosa, autêntica.
+            Quando você veste Reflora, escolhe ampliar a vida útil de um material, apoiar
+            artesãos locais e vestir uma estética que não se repete. É moda que convida à
+            presença, não ao descarte.
           </p>
           <p className={styles.signature}>
-            Vista a mudança que você quer ver no mundo.
+            Obrigada por cultivar esse jardim junto com a gente.
           </p>
         </div>
       </div>
