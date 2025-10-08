@@ -68,6 +68,15 @@
   font-size: 0.95rem;
 }
 
+.info {
+  background: rgba(78, 169, 94, 0.12);
+  color: #1c7c39;
+  border: 1px solid rgba(78, 169, 94, 0.22);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.94rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -119,6 +128,21 @@
   box-shadow: none;
 }
 
+.linkButton {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.85rem;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+}
+
 .captchaWrapper {
   display: flex;
   justify-content: center;
@@ -136,6 +160,13 @@
   background: rgba(95, 138, 139, 0.12);
   padding: 0.15rem 0.3rem;
   border-radius: 4px;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
 }
 
 .divider {

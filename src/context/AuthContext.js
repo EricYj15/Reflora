@@ -8,6 +8,8 @@ const AuthContext = createContext({
   login: async () => {},
   register: async () => {},
   loginWithGoogleCredential: async () => {},
+  requestPasswordReset: async () => {},
+  confirmPasswordReset: async () => {},
   logout: () => {},
   refreshUser: async () => {}
 });
@@ -170,6 +172,30 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, [persistAuth]);
 
+  const requestPasswordReset = useCallback(async ({ email, captchaToken }) => {
+    const payload = { email };
+    if (typeof captchaToken === 'string' && captchaToken.trim().length > 0) {
+      payload.captchaToken = captchaToken;
+    }
+
+    return requestJson('/api/auth/reset-password/request', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }, []);
+
+  const confirmPasswordReset = useCallback(async ({ email, code, newPassword, captchaToken }) => {
+    const payload = { email, code, newPassword };
+    if (typeof captchaToken === 'string' && captchaToken.trim().length > 0) {
+      payload.captchaToken = captchaToken;
+    }
+
+    return requestJson('/api/auth/reset-password/confirm', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }, []);
+
   const logout = useCallback(() => {
     setStoredToken(null);
     setToken(null);
@@ -207,9 +233,22 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     loginWithGoogleCredential,
+    requestPasswordReset,
+    confirmPasswordReset,
     logout,
     refreshUser
-  }), [loading, login, loginWithGoogleCredential, logout, refreshUser, register, token, user]);
+  }), [
+    confirmPasswordReset,
+    loading,
+    login,
+    loginWithGoogleCredential,
+    logout,
+    refreshUser,
+    register,
+    requestPasswordReset,
+    token,
+    user
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

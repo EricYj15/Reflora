@@ -8,6 +8,7 @@ const mercadopago = require('mercadopago');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
@@ -32,8 +33,17 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRATION = process.env.JWT_EXPIRATION || '7d';
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
-const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET || '';
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET || process.env.RECAPTCHA_SECRET_KEY || '';
 const RECAPTCHA_MIN_SCORE = Number(process.env.RECAPTCHA_MIN_SCORE || 0);
+const RESET_TOKEN_EXPIRATION_MINUTES = Number(process.env.RESET_TOKEN_EXPIRATION_MINUTES || 15);
+const RESET_MAX_ATTEMPTS = Number(process.env.RESET_MAX_ATTEMPTS || 5);
+const RESET_REQUEST_COOLDOWN_MINUTES = Number(process.env.RESET_REQUEST_COOLDOWN_MINUTES || 2);
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || '';
+const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -158,6 +168,106 @@ function writeProducts(data) {
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
 
+let mailTransporter = null;
+
+function isEmailTransportConfigured() {
+  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM);
+}
+
+function getMailTransporter() {
+  if (!isEmailTransportConfigured()) {
+    return null;
+  }
+
+  if (!mailTransporter) {
+    mailTransporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS
+      }
+    });
+  }
+
+  return mailTransporter;
+}
+
+async function sendPasswordResetEmail(recipient, code) {
+  if (!recipient || !code) {
+    return false;
+  }
+
+  if (!isEmailTransportConfigured()) {
+    console.info(`[Reset Password] Código ${code} para ${recipient} (SMTP não configurado).`);
+    return false;
+  }
+
+  try {
+    const transporter = getMailTransporter();
+    if (!transporter) {
+      return false;
+    }
+
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to: recipient,
+      subject: 'Reflora - Código de redefinição de senha',
+      text: `Olá!\n\nRecebemos um pedido para redefinir a senha da sua conta Reflora. Utilize o código abaixo dentro de ${RESET_TOKEN_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não solicitou a alteração, ignore esta mensagem.\n\nEquipe Reflora`,
+      html: `
+        <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
+          <p>Olá!</p>
+          <p>Recebemos um pedido para redefinir a senha da sua conta Reflora.</p>
+          <p>Utilize o código abaixo dentro de <strong>${RESET_TOKEN_EXPIRATION_MINUTES} minutos</strong>:</p>
+          <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #7b0f12;">${code}</p>
+          <p>Se você não solicitou a alteração, ignore esta mensagem.</p>
+          <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
+        </div>
+      `
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar e-mail de redefinição de senha:', error);
+    return false;
+  }
+}
+
+function generateResetCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function createResetRecord(codeHash) {
+  const now = Date.now();
+  return {
+    codeHash,
+    attempts: 0,
+    expiresAt: new Date(now + RESET_TOKEN_EXPIRATION_MINUTES * 60 * 1000).toISOString(),
+    issuedAt: new Date(now).toISOString()
+  };
+}
+
+function isResetRequestExpired(resetRequest = null) {
+  if (!resetRequest?.expiresAt) {
+    return true;
+  }
+  const expires = Date.parse(resetRequest.expiresAt);
+  return Number.isNaN(expires) || Date.now() > expires;
+}
+
+function isResetRequestOnCooldown(resetRequest = null) {
+  if (!resetRequest?.issuedAt) {
+    return false;
+  }
+  const issued = Date.parse(resetRequest.issuedAt);
+  if (Number.isNaN(issued)) {
+    return false;
+  }
+  const diff = Date.now() - issued;
+  return diff < RESET_REQUEST_COOLDOWN_MINUTES * 60 * 1000;
+}
+
 function normalizeEmail(email = '') {
   return email.trim().toLowerCase();
 }
@@ -167,7 +277,7 @@ function sanitizePublicUser(user) {
     return null;
   }
 
-  const { passwordHash, googleId, ...rest } = user;
+  const { passwordHash, googleId, resetRequest, ...rest } = user;
   return {
     ...rest,
     role: user.role || 'customer'
@@ -928,6 +1038,164 @@ app.post(
     } catch (error) {
       console.error('Erro ao efetuar login:', error);
       res.status(500).json({ success: false, message: 'Não foi possível efetuar login.' });
+    }
+  }
+);
+
+app.post(
+  '/api/auth/reset-password/request',
+  [body('email').isEmail().withMessage('Informe um e-mail válido.')],
+  async (req, res) => {
+    if (!ensureJwtSecretOrRespond(res)) {
+      return;
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    if (RECAPTCHA_SECRET) {
+      try {
+        await validateRecaptchaToken(req.body?.captchaToken, extractClientIp(req));
+      } catch (captchaError) {
+        console.warn('Falha na validação reCAPTCHA (reset request):', captchaError);
+        return res.status(400).json({
+          success: false,
+          message: 'Não foi possível validar sua identidade. Recarregue a página e tente novamente.'
+        });
+      }
+    }
+
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const db = readUsers();
+    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+
+    if (userIndex !== -1) {
+      const user = db.users[userIndex];
+
+      if (user.provider === 'google' && !user.passwordHash) {
+        // Usuários exclusivos do Google não possuem senha local para redefinir.
+        console.info(`Solicitação de redefinição ignorada para conta Google sem senha local: ${normalizedEmail}.`);
+      } else {
+        const existingRequest = user.resetRequest;
+        if (existingRequest && !isResetRequestExpired(existingRequest) && isResetRequestOnCooldown(existingRequest)) {
+          console.info(`Solicitação de redefinição para ${normalizedEmail} ignorada (cooldown ativo).`);
+        } else {
+          const code = generateResetCode();
+          const codeHash = await bcrypt.hash(code, 12);
+          user.resetRequest = createResetRecord(codeHash);
+          db.users[userIndex] = user;
+          writeUsers(db);
+
+          const dispatched = await sendPasswordResetEmail(normalizedEmail, code);
+          if (!dispatched) {
+            console.info(`Código de redefinição gerado para ${normalizedEmail}: ${code}`);
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Se o e-mail estiver cadastrado, enviaremos um código de verificação.'
+    });
+  }
+);
+
+app.post(
+  '/api/auth/reset-password/confirm',
+  [
+    body('email').isEmail().withMessage('Informe um e-mail válido.'),
+    body('code').isLength({ min: 4 }).withMessage('Informe o código recebido.'),
+    body('newPassword').isLength({ min: 8 }).withMessage('A nova senha deve conter ao menos 8 caracteres.')
+  ],
+  async (req, res) => {
+    if (!ensureJwtSecretOrRespond(res)) {
+      return;
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    if (RECAPTCHA_SECRET) {
+      try {
+        await validateRecaptchaToken(req.body?.captchaToken, extractClientIp(req));
+      } catch (captchaError) {
+        console.warn('Falha na validação reCAPTCHA (reset confirm):', captchaError);
+        return res.status(400).json({
+          success: false,
+          message: 'Não foi possível validar sua identidade. Recarregue a página e tente novamente.'
+        });
+      }
+    }
+
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const providedCode = String(req.body.code || '').trim();
+    const newPassword = req.body.newPassword;
+
+    const db = readUsers();
+    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+
+    if (userIndex === -1) {
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    const user = db.users[userIndex];
+
+    if (user.provider === 'google' && !user.passwordHash) {
+      return res.status(400).json({
+        success: false,
+        message: 'Esta conta utiliza login do Google. Defina uma senha pelo painel administrativo antes de usar o fluxo de redefinição.'
+      });
+    }
+
+    const resetRequest = user.resetRequest;
+    if (!resetRequest) {
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    if (isResetRequestExpired(resetRequest)) {
+      delete user.resetRequest;
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    if (resetRequest.attempts >= RESET_MAX_ATTEMPTS) {
+      delete user.resetRequest;
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Número máximo de tentativas excedido. Solicite um novo código.' });
+    }
+
+    const validCode = await bcrypt.compare(providedCode, resetRequest.codeHash || '');
+
+    if (!validCode) {
+      user.resetRequest = {
+        ...resetRequest,
+        attempts: (resetRequest.attempts || 0) + 1
+      };
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    try {
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      user.passwordHash = passwordHash;
+      user.provider = user.provider || 'local';
+      user.updatedAt = new Date().toISOString();
+      delete user.resetRequest;
+      db.users[userIndex] = user;
+      writeUsers(db);
+
+      return res.json({ success: true, message: 'Senha atualizada com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao confirmar redefinição de senha:', error);
+      return res.status(500).json({ success: false, message: 'Não foi possível redefinir a senha.' });
     }
   }
 );

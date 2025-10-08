@@ -223,11 +223,29 @@ href="https://pinterest.com/seu_perfil"
 2. Também defina `REACT_APP_GOOGLE_CLIENT_ID` com o mesmo valor para habilitar o botão de login no frontend.
 3. Gere um site key e um secret key no [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin) utilizando a opção **reCAPTCHA v2 – Checkbox "I'm not a robot"**.
 4. Configure as variáveis de ambiente do CAPTCHA:
-  - Backend: `RECAPTCHA_SECRET_KEY` (Secret key obtido no console do Google).
+  - Backend: `RECAPTCHA_SECRET` **ou** `RECAPTCHA_SECRET_KEY` (Secret key obtido no console do Google).
   - Frontend: `REACT_APP_RECAPTCHA_SITE_KEY` (Site key obtido no console do Google).
-5. Reinicie o servidor e o app (`npm run dev`) após alterar o `.env`.
-6. Usuários criados via email/senha são armazenados em `server/db/users.json` com senha criptografada (bcrypt).
-7. Para redefinir o ambiente, limpe o arquivo `users.json` (não remova a chave `users`).
+5. Configure o envio de e-mail para o fluxo de redefinição de senha (SMTP):
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
+  - `SMTP_USER`, `SMTP_PASS`
+  - `SMTP_FROM`: remetente exibido para o usuário (ex.: `"Reflora <no-reply@reflora.com>"`).
+  - Ajuste, se necessário, `RESET_TOKEN_EXPIRATION_MINUTES`, `RESET_MAX_ATTEMPTS` e `RESET_REQUEST_COOLDOWN_MINUTES`.
+  - Ambiente de desenvolvimento: se o SMTP não estiver configurado, o código é exibido no log do servidor para facilitar testes.
+6. Reinicie o servidor e o app (`npm run dev`) após alterar o `.env`.
+7. Usuários criados via email/senha são armazenados em `server/db/users.json` com senha criptografada (bcrypt).
+8. Para redefinir o ambiente, limpe o arquivo `users.json` (não remova a chave `users`).
+
+### Recuperação de senha
+
+1. No modal de autenticação, o usuário escolhe **“Esqueci minha senha”** e informa o e-mail cadastrado.
+2. O sistema exige a validação do reCAPTCHA e envia um código de verificação de 6 dígitos por e-mail (`POST /api/auth/reset-password/request`).
+3. Com o código em mãos, o usuário informa o código + nova senha + confirmação (+ reCAPTCHA) para concluir (`POST /api/auth/reset-password/confirm`).
+4. O backend armazena temporariamente o hash do código, respeitando:
+  - Expiração configurável (`RESET_TOKEN_EXPIRATION_MINUTES`, padrão 15 minutos)
+  - Limite de tentativas (`RESET_MAX_ATTEMPTS`, padrão 5)
+  - Intervalo mínimo entre solicitações (`RESET_REQUEST_COOLDOWN_MINUTES`, padrão 2 minutos)
+5. Depois da confirmação, a senha é atualizada com hash bcrypt e o token é invalidado. Contas sem senha local (apenas Google) precisam primeiro definir uma senha pelo painel administrativo.
+6. Se o SMTP não estiver configurado, o código é registrado no log do backend para facilitar testes em ambiente de desenvolvimento.
 
 ### Acesso administrativo
 
