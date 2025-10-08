@@ -109,6 +109,14 @@
 
 .primary:hover { background: #5e0b0d; }
 
+.ctaDisabled,
+.ctaDisabled:hover {
+  background: rgba(0,0,0,0.25);
+  border-color: rgba(255,255,255,0.35);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .productCard:hover .image {
   transform: scale(1.08);
 }
@@ -150,6 +158,51 @@
   font-weight: 500;
   margin: 0;
   letter-spacing: 0.02em;
+}
+
+.stock {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.75rem;
+  color: #4f5b56;
+}
+
+.stockOut {
+  color: #a31919;
+  font-weight: 600;
+}
+
+.sizeRow {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sizeBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  border: 1px solid rgba(95, 138, 139, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sizeAvailable {
+  border-color: rgba(95, 138, 139, 0.85);
+  color: var(--ink);
+}
+
+.sizeUnavailable {
+  border-color: rgba(128, 128, 128, 0.3);
+  color: rgba(128, 128, 128, 0.65);
+  text-decoration: line-through;
 }
 
 /* Responsive */

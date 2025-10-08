@@ -1,3 +1,99 @@
 {
-  "orders": []
+  "orders": [
+    {
+      "id": "D56782C325",
+      "userId": "35640be2-fe08-457b-9d1d-83c449edab4f",
+      "customer": {
+        "name": "Eric Yuji Ito",
+        "email": "dev.ericyuji@gmail.com",
+        "phone": "11993482815",
+        "document": "702.939.666-99"
+      },
+      "address": {
+        "street": "Rua Topázio",
+        "number": "123",
+        "complement": "23",
+        "district": "Vila Mariana",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "04105-063"
+      },
+      "items": [
+        {
+          "id": 2,
+          "name": "Vestido Eclipse",
+          "quantity": 1,
+          "priceValue": 245
+        }
+      ],
+      "shipping": {
+        "cep": "04105063",
+        "price": 18.9,
+        "formattedPrice": "R$ 18,90",
+        "deliveryEstimate": "2 a 3 dias úteis",
+        "region": "Sudeste",
+        "label": "São Paulo"
+      },
+      "total": 263.9,
+      "createdAt": "2025-10-07T23:14:47.938Z"
+    },
+    {
+      "id": "F197C5AA2F",
+      "userId": "35640be2-fe08-457b-9d1d-83c449edab4f",
+      "customer": {
+        "name": "Eric Yuji Ito",
+        "email": "dev.ericyuji@gmail.com",
+        "phone": "11993482815",
+        "document": "702.939.666-99"
+      },
+      "address": {
+        "street": "Rua Topázio",
+        "number": "123",
+        "complement": "23",
+        "district": "Vila Mariana",
+        "city": "São Paulo",
+        "state": "sp",
+        "zip": "04105063"
+      },
+      "items": [
+        {
+          "id": 2,
+          "name": "Vestido Eclipse",
+          "quantity": 1,
+          "priceValue": 245
+        }
+      ],
+      "total": 245,
+      "createdAt": "2025-10-07T22:22:45.689Z"
+    },
+    {
+      "id": "4EF303CD01",
+      "userId": "35640be2-fe08-457b-9d1d-83c449edab4f",
+      "customer": {
+        "name": "Eric Yuji Ito",
+        "email": "dev.ericyuji@gmail.com",
+        "phone": "(11) 99348-2815",
+        "document": "702.939.666-99"
+      },
+      "address": {
+        "street": "Rua Topázio",
+        "number": "123",
+        "complement": "23",
+        "district": "Vila Mariana",
+        "city": "São Paulo",
+        "state": "sp",
+        "zip": "04105063"
+      },
+      "items": [
+        {
+          "id": 2,
+          "name": "Vestido Eclipse",
+          "quantity": 1,
+          "priceValue": 245
+        }
+      ],
+      "total": 245,
+      "createdAt": "2025-10-07T22:20:46.116Z"
+    }
+  ]
 }

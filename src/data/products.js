@@ -10,7 +10,9 @@ export const products = [
       "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800",
       "https://images.unsplash.com/photo-1543076659-9380cdf10613?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-1"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-1",
+  stock: 2,
+  sizes: { PP: true, P: true, M: true, G: false }
   },
   {
     id: 2,
@@ -21,7 +23,9 @@ export const products = [
       "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800",
       "https://images.unsplash.com/photo-1596783074918-c84cb06531ca?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-2"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-2",
+  stock: 1,
+  sizes: { PP: false, P: false, M: true, G: true }
   },
   {
     id: 3,
@@ -32,7 +36,9 @@ export const products = [
       "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800",
       "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-3"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-3",
+  stock: 4,
+  sizes: { PP: true, P: true, M: true, G: true }
   },
   {
     id: 4,
@@ -43,7 +49,9 @@ export const products = [
       "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800",
       "https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-4"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-4",
+  stock: 3,
+  sizes: { PP: true, P: true, M: false, G: true }
   },
   {
     id: 5,
@@ -54,7 +62,9 @@ export const products = [
       "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800",
       "https://images.unsplash.com/photo-1594938291221-94f18cbb5660?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-5"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-5",
+  stock: 2,
+  sizes: { PP: false, P: false, M: true, G: true }
   },
   {
     id: 6,
@@ -65,6 +75,8 @@ export const products = [
       "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=800",
       "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=800"
     ],
-    purchaseLink: "https://seu-link-de-pagamento.com/produto-6"
+    purchaseLink: "https://seu-link-de-pagamento.com/produto-6",
+  stock: 5,
+  sizes: { PP: true, P: true, M: true, G: false }
   }
 ];

@@ -1,7 +1,7 @@
 // FILE: src/App.js
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import './App.css';
 import ProductModal from './components/ProductModal/ProductModal';
 import Header from './components/Header/Header';
@@ -10,6 +10,27 @@ import PolicyModal from './components/PolicyModal/PolicyModal';
 import MiniCartPopover from './components/MiniCartPopover/MiniCartPopover';
 import HomePage from './pages/HomePage';
 import CheckoutPage from './pages/CheckoutPage';
+import AuthModal from './components/Auth/AuthModal';
+import { useAuth } from './context/AuthContext';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+
+const RequireAdmin = ({ children }) => {
+  const { isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ padding: '8rem 1.5rem', textAlign: 'center' }}>
+        Carregando painel…
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   const navigate = useNavigate();
@@ -24,6 +45,8 @@ function App() {
   const [miniCartPosition, setMiniCartPosition] = useState({ top: 0, right: 16 });
   const [recentItem, setRecentItem] = useState(null);
   const miniCartTimeoutRef = useRef(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { user } = useAuth();
 
   const handleProductClick = (product) => {
     setSelectedProduct(product);
@@ -241,18 +264,42 @@ function App() {
     setCartOpen(true);
   }, [closeMiniCart, setCartOpen]);
 
+  const handleOpenAuth = useCallback(() => {
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const handleCloseAuth = useCallback(() => {
+    setIsAuthModalOpen(false);
+  }, []);
+
+  const handleNavigateAdmin = useCallback(() => {
+    closeMiniCart();
+    setCartOpen(false);
+    navigate('/admin');
+  }, [closeMiniCart, navigate, setCartOpen]);
+
+  useEffect(() => {
+    if (user) {
+      setIsAuthModalOpen(false);
+    }
+  }, [user]);
+
+  const headerProps = useMemo(() => ({
+    onCartClick: handleCartButtonClick,
+    cartCount,
+    onOpenPolicy: () => setIsPolicyOpen(true),
+    cartButtonRef,
+    onNavigateHome: handleNavigateHome,
+    onNavigateProducts: handleNavigateProducts,
+    onNavigateManifesto: handleNavigateManifesto,
+    onNavigateContact: handleNavigateContact,
+    onOpenAuth: handleOpenAuth,
+    onNavigateAdmin: handleNavigateAdmin
+  }), [cartCount, handleCartButtonClick, handleNavigateAdmin, handleNavigateContact, handleNavigateHome, handleNavigateManifesto, handleNavigateProducts, handleOpenAuth, setIsPolicyOpen]);
+
   return (
     <div className="App">
-      <Header
-        onCartClick={handleCartButtonClick}
-        cartCount={cartCount}
-        onOpenPolicy={() => setIsPolicyOpen(true)}
-        cartButtonRef={cartButtonRef}
-        onNavigateHome={handleNavigateHome}
-        onNavigateProducts={handleNavigateProducts}
-        onNavigateManifesto={handleNavigateManifesto}
-        onNavigateContact={handleNavigateContact}
-      />
+      <Header {...headerProps} />
       <MiniCartPopover
         open={isMiniCartOpen && cartItems.length > 0}
         position={miniCartPosition}
@@ -280,6 +327,14 @@ function App() {
             />
           }
         />
+        <Route
+          path="/admin"
+          element={(
+            <RequireAdmin>
+              <AdminDashboard />
+            </RequireAdmin>
+          )}
+        />
       </Routes>
       <PolicyModal isOpen={isPolicyOpen} onClose={() => setIsPolicyOpen(false)} />
       
@@ -300,6 +355,8 @@ function App() {
         onDecrement={decQty}
         onCheckout={navigateToCheckout}
       />
+
+      <AuthModal open={isAuthModalOpen} onClose={handleCloseAuth} />
     </div>
   );
 }

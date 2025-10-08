@@ -43,6 +43,13 @@
   margin: 0;
 }
 
+.authHint {
+  font-family: 'Montserrat', sans-serif;
+  color: rgba(46, 46, 43, 0.68);
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}
+
 .summaryCard {
   background: var(--surface);
   border-radius: 18px;
@@ -89,6 +96,34 @@
   font-weight: 600;
   color: var(--ink);
   font-size: 1.1rem;
+}
+
+.shippingRow {
+  font-weight: 500;
+  color: var(--muted-ink);
+  font-size: 0.95rem;
+}
+
+.shippingRow small {
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(46, 46, 43, 0.55);
+}
+
+.shippingReminder {
+  margin: 0.35rem 0 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(46, 46, 43, 0.65);
+}
+
+.grandTotalRow {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(95, 138, 139, 0.18);
+  font-size: 1.2rem;
 }
 
 .emptyCart {
@@ -142,7 +177,71 @@
   gap: 0.5rem;
 }
 
+.cepControl {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.cepLabel {
+  position: relative;
+}
+
+.cepRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.cepRow input {
+  flex: 1;
+}
+
+.cepLookupButton {
+  padding: 0.65rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cepLookupButton:hover:not(:disabled) {
+  background: #4f7373;
+  box-shadow: 0 8px 18px rgba(95, 138, 139, 0.24);
+  transform: translateY(-1px);
+}
+
+.cepLookupButton:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.cepStatusArea {
+  min-height: 1.1rem;
+}
+
+.cepStatusArea p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.cepStatusError {
+  color: var(--wine);
+  font-weight: 600;
+}
+
+.cepStatusMessage {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .fieldGroup input,
+.cepRow input,
 .pixPayload {
   font-family: 'Montserrat', sans-serif;
   font-size: 0.95rem;
@@ -154,7 +253,8 @@
   resize: vertical;
 }
 
-.fieldGroup input:focus {
+.fieldGroup input:focus,
+.cepRow input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(95, 138, 139, 0.2);
   outline: none;
@@ -198,6 +298,98 @@
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.shippingInfoBox {
+  background: rgba(95, 138, 139, 0.08);
+  border: 1px dashed rgba(95, 138, 139, 0.24);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.5rem;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--muted-ink);
+}
+
+.shippingInfoContent {
+  display: grid;
+  gap: 0.4rem;
+
+.shippingCalculateBox {
+  display: grid;
+  gap: 0.6rem;
+}
+}
+
+.shippingInfoContent p {
+  margin: 0;
+}
+
+.shippingEstimate {
+.calculateButton {
+  justify-self: start;
+  padding: 0.7rem 1.3rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.calculateButton:hover:not(:disabled) {
+  background: #4f7373;
+  box-shadow: 0 10px 24px rgba(95, 138, 139, 0.24);
+  transform: translateY(-1px);
+}
+
+.calculateButton:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+  font-size: 0.85rem;
+  color: rgba(46, 46, 43, 0.7);
+}
+
+.shippingInfoHint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: rgba(46, 46, 43, 0.72);
+}
+
+.shippingError {
+  margin: 0;
+  color: var(--wine);
+  font-weight: 600;
+}
+
+.recalculateButton {
+  justify-self: start;
+  margin-top: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid rgba(95, 138, 139, 0.38);
+  color: var(--primary);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.recalculateButton:hover:not(:disabled) {
+  background: rgba(95, 138, 139, 0.12);
+  border-color: rgba(95, 138, 139, 0.6);
+}
+
+.recalculateButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .error {
@@ -260,6 +452,13 @@
   margin: 0;
   font-family: 'Montserrat', sans-serif;
   color: var(--muted-ink);
+}
+
+.orderShippingInfo {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  color: rgba(46, 46, 43, 0.68);
+  font-size: 0.9rem;
 }
 
 .qrCode {
@@ -391,6 +590,13 @@
   text-align: left;
 }
 
+.shippingTableNote {
+  display: block;
+  margin-top: 0.25rem;
+  color: rgba(46, 46, 43, 0.65);
+  font-size: 0.75rem;
+}
+
 .ordersTable tbody tr:hover {
   background: rgba(95, 138, 139, 0.08);
 }
@@ -430,5 +636,19 @@
 
   .fieldGroup {
     grid-template-columns: 1fr;
+  }
+
+  .cepRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cepLookupButton,
+  .recalculateButton {
+    width: 100%;
+  }
+
+  .calculateButton {
+    width: 100%;
   }
 }

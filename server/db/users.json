@@ -1,0 +1,40 @@
+{
+  "users": [
+    {
+      "id": "b0e78229-a88a-48a5-a673-1d1534d4bf17",
+      "name": "Eric Yj",
+      "email": "ericyujibr@gmail.com",
+      "passwordHash": null,
+      "provider": "google",
+      "googleId": "110723012710794967887",
+      "createdAt": "2025-10-07T22:19:44.370Z"
+    },
+    {
+      "id": "35640be2-fe08-457b-9d1d-83c449edab4f",
+      "name": "Eric Yuji Ito",
+      "email": "dev.ericyuji@gmail.com",
+      "passwordHash": null,
+      "provider": "google",
+      "googleId": "109660102509714113695",
+      "createdAt": "2025-10-07T22:20:23.483Z"
+    },
+    {
+      "id": "5ccb1920-5d60-49fc-961c-c0e3ae27a8cd",
+      "name": "Sofia Stahel",
+      "email": "reflora123@gmail.com",
+      "passwordHash": "$2a$12$1k79rG4M5MXPNkra0vL5l.FbG0Gyckx/ZWJJJZKjd712YdRBMDrSq",
+      "provider": "local",
+      "createdAt": "2025-10-07T23:35:39.907Z"
+    },
+    {
+      "id": "d5ad8840-b62b-4457-ada4-fcb92e31326e",
+      "name": "sofia",
+      "email": "reflorar123@gmail.com",
+      "passwordHash": null,
+      "provider": "google",
+      "googleId": "109075653753189100386",
+      "createdAt": "2025-10-07T23:37:51.040Z",
+      "role": "admin"
+    }
+  ]
+}
