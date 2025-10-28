@@ -13,6 +13,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import AuthModal from './components/Auth/AuthModal';
 import { useAuth } from './context/AuthContext';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import MyOrders from './pages/MyOrders/MyOrders';
 
 const RequireAdmin = ({ children }) => {
   const { isAdmin, loading } = useAuth();
@@ -278,6 +279,12 @@ function App() {
     navigate('/admin');
   }, [closeMiniCart, navigate, setCartOpen]);
 
+  const handleNavigateMyOrders = useCallback(() => {
+    closeMiniCart();
+    setCartOpen(false);
+    navigate('/meus-pedidos');
+  }, [closeMiniCart, navigate, setCartOpen]);
+
   useEffect(() => {
     if (user) {
       setIsAuthModalOpen(false);
@@ -294,8 +301,9 @@ function App() {
     onNavigateManifesto: handleNavigateManifesto,
     onNavigateContact: handleNavigateContact,
     onOpenAuth: handleOpenAuth,
-    onNavigateAdmin: handleNavigateAdmin
-  }), [cartCount, handleCartButtonClick, handleNavigateAdmin, handleNavigateContact, handleNavigateHome, handleNavigateManifesto, handleNavigateProducts, handleOpenAuth, setIsPolicyOpen]);
+    onNavigateAdmin: handleNavigateAdmin,
+    onNavigateMyOrders: handleNavigateMyOrders
+  }), [cartCount, handleCartButtonClick, handleNavigateAdmin, handleNavigateContact, handleNavigateHome, handleNavigateManifesto, handleNavigateProducts, handleOpenAuth, handleNavigateMyOrders, setIsPolicyOpen]);
 
   return (
     <div className="App">
@@ -326,6 +334,10 @@ function App() {
               onOpenPolicy={() => setIsPolicyOpen(true)}
             />
           }
+        />
+        <Route
+          path="/meus-pedidos"
+          element={<MyOrders />}
         />
         <Route
           path="/admin"

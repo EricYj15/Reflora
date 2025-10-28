@@ -14,7 +14,8 @@ const Header = ({
   onNavigateManifesto = () => {},
   onNavigateContact = () => {},
   onOpenAuth = () => {},
-  onNavigateAdmin = () => {}
+  onNavigateAdmin = () => {},
+  onNavigateMyOrders = () => {}
 }) => {
   const { user, logout, loading, isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,6 +75,11 @@ const Header = ({
         <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateManifesto)}>Manifesto</button>
         <button type="button" className={styles.link} onClick={() => handleNavigate(onOpenPolicy)}>Garantia</button>
         <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateContact)}>Contato</button>
+        {user && (
+          <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateMyOrders)}>
+            Meus Pedidos
+          </button>
+        )}
         {isAdmin && (
           <button type="button" className={`${styles.link} ${styles.adminLink}`} onClick={() => handleNavigate(onNavigateAdmin)}>
             Painel
@@ -132,6 +138,11 @@ const Header = ({
             <button type="button" className={styles.link} onClick={onNavigateManifesto}>Manifesto</button>
             <button type="button" className={styles.link} onClick={onOpenPolicy}>Garantia</button>
             <button type="button" className={styles.link} onClick={onNavigateContact}>Contato</button>
+            {user && (
+              <button type="button" className={styles.link} onClick={onNavigateMyOrders}>
+                Meus Pedidos
+              </button>
+            )}
             {isAdmin && (
               <button type="button" className={`${styles.link} ${styles.adminLink}`} onClick={onNavigateAdmin}>
                 Painel

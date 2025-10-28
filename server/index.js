@@ -715,13 +715,25 @@ async function buildMercadoPagoData(order) {
   try {
     mercadopago.configure({ access_token: accessToken });
 
-    const preference = {
-      items: order.items.map((item) => ({
-        title: item.name,
-        quantity: Number(item.quantity) || 1,
+    const items = order.items.map((item) => ({
+      title: item.name,
+      quantity: Number(item.quantity) || 1,
+      currency_id: 'BRL',
+      unit_price: Number(item.priceValue) || 0
+    }));
+
+    // Adicionar frete como item separado se existir
+    if (order.shipping && Number(order.shipping) > 0) {
+      items.push({
+        title: 'Frete',
+        quantity: 1,
         currency_id: 'BRL',
-        unit_price: Number(item.priceValue) || 0
-      })),
+        unit_price: Number(order.shipping)
+      });
+    }
+
+    const preference = {
+      items: items,
       payer: {
         name: order.customer.name,
         email: order.customer.email
@@ -1309,6 +1321,23 @@ app.get('/api/orders', attachUserIfPresent, (req, res) => {
   }
 
   res.json({ orders: db.orders });
+});
+
+app.get('/api/orders/my-orders', authenticateToken, (req, res) => {
+  try {
+    const db = readDatabase();
+    const userOrders = db.orders.filter((order) => order.userId === req.userId);
+    
+    // Ordenar por data mais recente
+    const sortedOrders = userOrders.sort((a, b) => {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    res.json(sortedOrders);
+  } catch (error) {
+    console.error('Erro ao buscar pedidos do usuário:', error);
+    res.status(500).json({ message: 'Erro ao buscar pedidos.' });
+  }
 });
 
 app.post('/api/shipping/quote', (req, res) => {
