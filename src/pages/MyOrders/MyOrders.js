@@ -4,40 +4,52 @@ import { apiFetch } from '../../utils/api';
 import styles from './MyOrders.module.css';
 
 export default function MyOrders() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !token) {
       setLoading(false);
       return;
     }
     
     fetchOrders();
-  }, [user]);
+  }, [user, token]);
 
   async function fetchOrders() {
+    if (!token) {
+      setError('Você precisa fazer login para ver seus pedidos.');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Buscando pedidos com token:', token ? 'Token presente' : 'Token ausente');
+
     try {
-      const token = localStorage.getItem('token');
-      
       const response = await apiFetch('/api/orders/my-orders', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Erro ao buscar pedidos');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Erro na resposta:', errorData);
+        throw new Error(errorData.message || 'Erro ao buscar pedidos');
       }
 
       const data = await response.json();
+      console.log('Pedidos recebidos:', data.length);
       setOrders(data);
+      setError(null);
     } catch (err) {
       console.error('Erro ao buscar pedidos:', err);
-      setError('Não foi possível carregar seus pedidos.');
+      setError(err.message || 'Não foi possível carregar seus pedidos.');
     } finally {
       setLoading(false);
     }
@@ -111,7 +123,13 @@ export default function MyOrders() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>{error}</div>
+        <div className={styles.errorState}>
+          <h2>Erro ao carregar pedidos</h2>
+          <p className={styles.error}>{error}</p>
+          <button onClick={() => { setError(null); setLoading(true); fetchOrders(); }} className={styles.retryButton}>
+            Tentar Novamente
+          </button>
+        </div>
       </div>
     );
   }

@@ -402,7 +402,8 @@ function authenticateToken(req, res, next) {
   const token = extractTokenFromHeader(req);
 
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Token ausente.' });
+    console.log('Autenticação falhou: Token ausente');
+    return res.status(401).json({ success: false, message: 'Token ausente. Faça login novamente.' });
   }
 
   try {
@@ -410,9 +411,11 @@ function authenticateToken(req, res, next) {
     req.userId = payload.sub;
     req.userEmail = payload.email;
     req.userRole = payload.role || 'customer';
+    console.log(`Autenticação OK: userId=${req.userId}, email=${req.userEmail}`);
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: 'Token inválido ou expirado.' });
+    console.error('Erro ao verificar token:', error.message);
+    return res.status(401).json({ success: false, message: 'Token inválido ou expirado. Faça login novamente.' });
   }
 }
 
@@ -1361,8 +1364,11 @@ app.get('/api/orders', attachUserIfPresent, (req, res) => {
 
 app.get('/api/orders/my-orders', authenticateToken, (req, res) => {
   try {
+    console.log(`Buscando pedidos para userId: ${req.userId}`);
     const db = readDatabase();
     const userOrders = db.orders.filter((order) => order.userId === req.userId);
+    
+    console.log(`Encontrados ${userOrders.length} pedidos para o usuário`);
     
     // Ordenar por data mais recente
     const sortedOrders = userOrders.sort((a, b) => {

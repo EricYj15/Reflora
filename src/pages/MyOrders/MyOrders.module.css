@@ -24,16 +24,47 @@
 }
 
 /* Loading & Error States */
-.loading,
-.error {
+.loading {
   text-align: center;
   padding: 60px 20px;
   font-size: 1.2rem;
   color: #6c757d;
 }
 
+.errorState {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.errorState h2 {
+  font-family: 'Playfair Display', serif;
+  color: #dc3545;
+  margin-bottom: 15px;
+}
+
 .error {
   color: #dc3545;
+  margin-bottom: 20px;
+}
+
+.retryButton {
+  background: #2d5016;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retryButton:hover {
+  background: #1f3810;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
 }
 
 /* Empty State */
