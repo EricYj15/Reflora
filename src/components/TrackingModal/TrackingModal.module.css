@@ -1,0 +1,283 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  color: #2d5016;
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #f8f9fa;
+  color: #2d5016;
+}
+
+.content {
+  padding: 28px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading p {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.error p {
+  color: #dc3545;
+  margin-bottom: 20px;
+}
+
+.retryButton {
+  background: #2d5016;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retryButton:hover {
+  background: #1f3810;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+}
+
+.trackingInfo {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 28px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.infoRow:not(:last-child) {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.value {
+  color: #2d5016;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.timeline h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  color: #2d5016;
+  margin-bottom: 20px;
+}
+
+.events {
+  position: relative;
+}
+
+.event {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.event:last-child {
+  margin-bottom: 0;
+}
+
+.eventMarker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.eventDot {
+  width: 16px;
+  height: 16px;
+  background: #2d5016;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #2d5016;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.event:first-child .eventDot {
+  background: #28a745;
+  box-shadow: 0 0 0 2px #28a745;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #28a745, 0 0 0 4px rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #28a745, 0 0 0 8px rgba(40, 167, 69, 0.1);
+  }
+}
+
+.eventLine {
+  width: 2px;
+  flex-grow: 1;
+  background: #e9ecef;
+  margin-top: 4px;
+}
+
+.eventContent {
+  flex: 1;
+  padding-bottom: 8px;
+}
+
+.eventDate {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.eventStatus {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 4px;
+}
+
+.eventLocation {
+  font-size: 0.9rem;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.eventDescription {
+  font-size: 0.9rem;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.noEvents {
+  text-align: center;
+  color: #6c757d;
+  padding: 20px;
+  font-style: italic;
+}
+
+.footer {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.disclaimer {
+  font-size: 0.85rem;
+  color: #6c757d;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal {
+    max-height: 95vh;
+    margin: 10px;
+  }
+
+  .header {
+    padding: 20px;
+  }
+
+  .header h2 {
+    font-size: 1.3rem;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .trackingInfo {
+    padding: 16px;
+  }
+
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .event {
+    gap: 12px;
+  }
+}

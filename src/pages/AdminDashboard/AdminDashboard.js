@@ -4,7 +4,7 @@ import styles from './AdminDashboard.module.css';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 
-const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
+const SIZE_KEYS = ['PP', 'P', 'M', 'G', '36', '37', '38', '39', '40', '41', '42', '43', '44'];
 
 const createDefaultSizes = () => SIZE_KEYS.reduce((acc, size) => ({ ...acc, [size]: true }), {});
 
@@ -27,7 +27,6 @@ const createEmptyProduct = () => ({
   name: '',
   description: '',
   priceValue: '',
-  purchaseLink: '',
   stock: '1',
   sizes: createDefaultSizes(),
   images: []
@@ -122,6 +121,42 @@ const AdminDashboard = () => {
       setProductsLoading(false);
     }
   }, [showError]);
+
+  const handleAddTracking = useCallback(async (orderId) => {
+    const trackingCode = prompt('Digite o código de rastreamento dos Correios (ex: AA123456789BR):');
+    
+    if (!trackingCode) return;
+
+    const normalized = trackingCode.trim().toUpperCase();
+    
+    if (!/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(normalized)) {
+      showError('Código inválido. Use o formato: AA123456789BR');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await apiFetch(`/api/orders/${orderId}/tracking`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ trackingCode: normalized })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erro ao adicionar código de rastreamento');
+      }
+
+      showSuccess('Código de rastreamento adicionado com sucesso!');
+      fetchOrders(); // Recarregar pedidos
+    } catch (err) {
+      console.error(err);
+      showError(err.message || 'Erro ao adicionar código de rastreamento.');
+    }
+  }, [showError, showSuccess, fetchOrders]);
 
   useEffect(() => {
     fetchOrders();
@@ -245,7 +280,6 @@ const AdminDashboard = () => {
       name: product.name || '',
       description: product.description || '',
       priceValue: String(product.priceValue ?? ''),
-      purchaseLink: product.purchaseLink || '',
       stock: String(Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0),
       sizes: normalizeSizes(product.sizes),
       images: Array.isArray(product.images) ? [...product.images] : []
@@ -279,15 +313,14 @@ const AdminDashboard = () => {
   };
 
   const buildPayload = () => {
-    const { name, description, priceValue, purchaseLink, stock, sizes, images } = form;
+    const { name, description, priceValue, stock, sizes, images } = form;
 
     const sanitizedImages = Array.isArray(images) ? images.filter(Boolean) : [];
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
-    const trimmedLink = purchaseLink.trim();
     const stockNumber = Number(stock);
 
-    if (!trimmedName || !trimmedDescription || !trimmedLink || !priceValue) {
+    if (!trimmedName || !trimmedDescription || !priceValue) {
       throw new Error('Preencha todos os campos obrigatórios da peça.');
     }
 
@@ -308,7 +341,6 @@ const AdminDashboard = () => {
     return {
       name: trimmedName,
       description: trimmedDescription,
-      purchaseLink: trimmedLink,
       priceValue,
       stock: stockNumber,
       sizes: normalizedSizes,
@@ -433,6 +465,7 @@ const AdminDashboard = () => {
                     <th>Total</th>
                     <th>Itens</th>
                     <th>Pagamento</th>
+                    <th>Rastreamento</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -464,6 +497,21 @@ const AdminDashboard = () => {
                       <td>
                         {order.pix?.available && <span className={styles.badge}>PIX</span>}
                         {order.mercadoPago?.available && <span className={styles.badge}>MP</span>}
+                      </td>
+                      <td>
+                        {order.trackingCode ? (
+                          <div className={styles.trackingCell}>
+                            <code>{order.trackingCode}</code>
+                          </div>
+                        ) : (
+                          <button 
+                            className={styles.addTrackingButton}
+                            onClick={() => handleAddTracking(order.id)}
+                            title="Adicionar código de rastreamento"
+                          >
+                            + Adicionar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -531,34 +579,45 @@ const AdminDashboard = () => {
                 />
               </label>
 
-              <label>
-                Link de compra
-                <input
-                  type="url"
-                  name="purchaseLink"
-                  value={form.purchaseLink}
-                  onChange={handleFormChange}
-                  placeholder="https://"
-                  required
-                />
-              </label>
-
               <fieldset className={styles.sizeFieldset}>
                 <legend>Tamanhos disponíveis</legend>
-                <div className={styles.sizeOptions}>
-                  {SIZE_KEYS.map((size) => (
-                    <label
-                      key={size}
-                      className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!form.sizes[size]}
-                        onChange={() => handleToggleSize(size)}
-                      />
-                      {size}
-                    </label>
-                  ))}
+                
+                <div className={styles.sizeGroup}>
+                  <h4 className={styles.sizeGroupTitle}>Roupas</h4>
+                  <div className={styles.sizeOptions}>
+                    {['PP', 'P', 'M', 'G'].map((size) => (
+                      <label
+                        key={size}
+                        className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!form.sizes[size]}
+                          onChange={() => handleToggleSize(size)}
+                        />
+                        {size}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.sizeGroup}>
+                  <h4 className={styles.sizeGroupTitle}>Calçados/Calças</h4>
+                  <div className={styles.sizeOptions}>
+                    {['36', '37', '38', '39', '40', '41', '42', '43', '44'].map((size) => (
+                      <label
+                        key={size}
+                        className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!form.sizes[size]}
+                          onChange={() => handleToggleSize(size)}
+                        />
+                        {size}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </fieldset>
 
@@ -654,9 +713,6 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <p className={styles.cardDescription}>{product.description}</p>
-                      <a href={product.purchaseLink} target="_blank" rel="noopener noreferrer" className={styles.cardLink}>
-                        Ver link da peça ↗
-                      </a>
                       <div className={styles.cardActions}>
                         <button type="button" onClick={() => handleEditProduct(product)} className={styles.smallButton}>
                           Editar

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
+import TrackingModal from '../../components/TrackingModal/TrackingModal';
 import styles from './MyOrders.module.css';
 
 export default function MyOrders() {
@@ -9,6 +10,7 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [trackingModalCode, setTrackingModalCode] = useState(null);
 
   const fetchOrders = useCallback(async () => {
     if (!token) {
@@ -251,6 +253,23 @@ export default function MyOrders() {
                           </>
                         )}
                       </div>
+                      
+                      {order.trackingCode && (
+                        <div className={styles.trackingSection}>
+                          <p className={styles.trackingInfo}>
+                            <strong>Código de Rastreamento:</strong> {order.trackingCode}
+                          </p>
+                          <button 
+                            className={styles.trackButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTrackingModalCode(order.trackingCode);
+                            }}
+                          >
+                            📦 Rastrear Pedido
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -269,6 +288,13 @@ export default function MyOrders() {
             </div>
           ))}
         </div>
+      )}
+
+      {trackingModalCode && (
+        <TrackingModal 
+          trackingCode={trackingModalCode} 
+          onClose={() => setTrackingModalCode(null)}
+        />
       )}
     </div>
   );

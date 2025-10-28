@@ -592,57 +592,57 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
               )}
             </div>
 
-            <div className={styles.ordersPanel}>
-              <button type="button" className={styles.toggleOrders} onClick={() => setShowOrders((prev) => !prev)}>
-                {showOrders ? 'Esconder cadastros' : 'Ver cadastros salvos'} ({orders.length})
-              </button>
+            {user?.isAdmin && (
+              <div className={styles.ordersPanel}>
+                <button type="button" className={styles.toggleOrders} onClick={() => setShowOrders((prev) => !prev)}>
+                  {showOrders ? 'Esconder cadastros' : 'Ver cadastros salvos'} ({orders.length})
+                </button>
 
-              {showOrders && (
-                <div className={styles.ordersTableWrapper}>
-                  {orders.length === 0 ? (
-                    <p className={styles.noOrders}>
-                      {user
-                        ? 'Nenhum pedido cadastrado ainda.'
-                        : 'Faça login ou crie uma conta para visualizar seus pedidos salvos.'}
-                    </p>
-                  ) : (
-                    <table className={styles.ordersTable}>
-                      <thead>
-                        <tr>
-                          <th>Data</th>
-                          <th>Cliente</th>
-                          <th>E-mail</th>
-                          <th>Cidade</th>
-                          <th>Produtos</th>
-                          <th>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders.map((order) => (
-                          <tr key={order.id}>
-                            <td>{new Date(order.createdAt).toLocaleString('pt-BR')}</td>
-                            <td>{order.customer?.name}</td>
-                            <td>{order.customer?.email}</td>
-                            <td>{order.address?.city}/{order.address?.state}</td>
-                            <td>
-                              {order.items?.map((item) => `${item.name} (x${item.quantity})`).join(', ')}
-                            </td>
-                            <td>
-                              R$ {Number(order.total || 0).toFixed(2)}
-                              {order.shipping?.price ? (
-                                <small className={styles.shippingTableNote}>
-                                  Frete: {order.shipping.formattedPrice}
-                                </small>
-                              ) : null}
-                            </td>
+                {showOrders && (
+                  <div className={styles.ordersTableWrapper}>
+                    {orders.length === 0 ? (
+                      <p className={styles.noOrders}>
+                        Nenhum pedido cadastrado ainda.
+                      </p>
+                    ) : (
+                      <table className={styles.ordersTable}>
+                        <thead>
+                          <tr>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>E-mail</th>
+                            <th>Cidade</th>
+                            <th>Produtos</th>
+                            <th>Total</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              )}
-            </div>
+                        </thead>
+                        <tbody>
+                          {orders.map((order) => (
+                            <tr key={order.id}>
+                              <td>{new Date(order.createdAt).toLocaleString('pt-BR')}</td>
+                              <td>{order.customer?.name}</td>
+                              <td>{order.customer?.email}</td>
+                              <td>{order.address?.city}/{order.address?.state}</td>
+                              <td>
+                                {order.items?.map((item) => `${item.name} (x${item.quantity})`).join(', ')}
+                              </td>
+                              <td>
+                                R$ {Number(order.total || 0).toFixed(2)}
+                                {order.shipping?.price ? (
+                                  <small className={styles.shippingTableNote}>
+                                    Frete: {order.shipping.formattedPrice}
+                                  </small>
+                                ) : null}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

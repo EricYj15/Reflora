@@ -1,11 +1,22 @@
 // FILE: src/components/ProductModal/ProductModal.js
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './ProductModal.module.css';
 
 const ProductModal = ({ product, onClose, onAddToCart }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const modalRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleBuyNow = () => {
+    // Adicionar ao carrinho
+    onAddToCart();
+    // Fechar modal
+    onClose();
+    // Redirecionar para checkout
+    navigate('/checkout');
+  };
 
   useEffect(() => {
     // Bloquear scroll do body quando o modal está aberto
@@ -90,15 +101,15 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
             <p className={styles.description}>{product.description}</p>
             
             <div className={styles.actions}>
-              <button className={`${styles.purchaseButton} ${styles.primary}`} onClick={onAddToCart}>Adicionar ao carrinho</button>
-              <a 
-                href={product.purchaseLink}
+              <button className={`${styles.purchaseButton} ${styles.primary}`} onClick={onAddToCart}>
+                Adicionar ao carrinho
+              </button>
+              <button 
                 className={styles.purchaseButton}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={handleBuyNow}
               >
                 Comprar agora
-              </a>
+              </button>
             </div>
           </div>
         </div>

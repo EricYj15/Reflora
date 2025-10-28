@@ -1565,6 +1565,84 @@ app.get('/api/pix', async (req, res) => {
   }
 });
 
+// Adicionar código de rastreamento ao pedido (apenas admin)
+app.patch('/api/orders/:orderId/tracking', authenticateToken, (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    const { orderId } = req.params;
+    const { trackingCode } = req.body;
+
+    if (!trackingCode || typeof trackingCode !== 'string') {
+      return res.status(400).json({ success: false, message: 'Código de rastreamento inválido.' });
+    }
+
+    const db = readDatabase();
+    const order = db.orders.find(o => o.id === orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    order.trackingCode = trackingCode.trim().toUpperCase();
+    order.trackingAddedAt = new Date().toISOString();
+    writeDatabase(db);
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('Erro ao adicionar código de rastreamento:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar pedido.' });
+  }
+});
+
+// Consultar rastreamento dos Correios
+app.get('/api/tracking/:trackingCode', async (req, res) => {
+  try {
+    const { trackingCode } = req.params;
+
+    if (!trackingCode || !/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(trackingCode)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Código de rastreamento inválido. Use o formato: AA123456789BR' 
+      });
+    }
+
+    // API gratuita dos Correios (mock - você pode integrar com API real)
+    // Exemplo de API real: https://api.linketrack.com ou https://rastro.app
+    const mockTracking = {
+      code: trackingCode,
+      service: 'SEDEX',
+      events: [
+        {
+          date: new Date().toISOString(),
+          location: 'São Paulo - SP',
+          status: 'Objeto em trânsito - por favor aguarde',
+          description: 'Objeto saiu para entrega ao destinatário'
+        },
+        {
+          date: new Date(Date.now() - 86400000).toISOString(),
+          location: 'Centro de Distribuição - SP',
+          status: 'Objeto em trânsito',
+          description: 'Objeto encaminhado'
+        },
+        {
+          date: new Date(Date.now() - 172800000).toISOString(),
+          location: 'Agência dos Correios',
+          status: 'Objeto postado',
+          description: 'Objeto postado após o horário limite da unidade'
+        }
+      ]
+    };
+
+    res.json({ success: true, tracking: mockTracking });
+  } catch (error) {
+    console.error('Erro ao consultar rastreamento:', error);
+    res.status(500).json({ success: false, message: 'Erro ao consultar rastreamento.' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor iniciado na porta ${PORT}`);
 });
