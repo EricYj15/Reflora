@@ -134,7 +134,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, enhanceUser]);
 
   const persistAuth = useCallback((authData) => {
     if (!authData?.token) {

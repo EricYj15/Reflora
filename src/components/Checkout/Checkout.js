@@ -51,9 +51,23 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
     [itemsTotal, shippingQuote]
   );
 
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/orders', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (Array.isArray(data.orders)) {
+        setOrders(data.orders);
+      }
+    } catch (err) {
+      console.error('Não foi possível carregar pedidos salvos.', err);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   useEffect(() => {
     if (!user) {
@@ -66,20 +80,6 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
       email: user.email || prev.email
     }));
   }, [user]);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await apiFetch('/api/orders', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      const data = await res.json();
-      if (Array.isArray(data.orders)) {
-        setOrders(data.orders);
-      }
-    } catch (err) {
-      console.error('Não foi possível carregar pedidos salvos.', err);
-    }
-  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;

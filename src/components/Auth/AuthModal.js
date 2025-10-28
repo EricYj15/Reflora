@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { useAuth } from '../../context/AuthContext';
@@ -81,11 +81,11 @@ const AuthModal = ({ open, onClose }) => {
     }
   };
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
       onClose?.();
     }
-  };
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) {
@@ -95,7 +95,7 @@ const AuthModal = ({ open, onClose }) => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, handleKeyDown]);
 
   const handleInputChange = (formSetter) => (event) => {
     const { name, value } = event.target;
