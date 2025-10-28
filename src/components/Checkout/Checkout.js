@@ -336,21 +336,6 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
     }
   };
 
-  const copyPixPayload = async () => {
-    if (!success?.pix?.payload) return;
-
-    try {
-      if (!navigator.clipboard) {
-        window.prompt('Copie o código PIX abaixo:', success.pix.payload);
-        return;
-      }
-      await navigator.clipboard.writeText(success.pix.payload);
-      alert('Código PIX copiado!');
-    } catch (err) {
-      console.error('Erro ao copiar PIX:', err);
-    }
-  };
-
   const mpData = success?.mercadoPago;
 
   return (
