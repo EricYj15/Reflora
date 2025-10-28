@@ -726,27 +726,23 @@ async function buildMercadoPagoData(order) {
     }));
 
     // Adicionar frete como item separado se existir
-    if (order.shipping && Number(order.shipping) > 0) {
+    const shippingPrice = order.shipping?.price || 0;
+    if (shippingPrice > 0) {
       items.push({
         title: 'Frete',
         quantity: 1,
         currency_id: 'BRL',
-        unit_price: Number(order.shipping)
+        unit_price: Number(shippingPrice)
       });
     }
+
+    console.log('Mercado Pago - Itens:', JSON.stringify(items, null, 2));
 
     const preference = {
       items: items,
       payer: {
         name: order.customer.name,
         email: order.customer.email
-      },
-      payment_methods: {
-        excluded_payment_types: [
-          { id: 'ticket' }, // Boleto
-          { id: 'atm' } // Pagamento em caixa eletrônico
-        ],
-        installments: 1 // Apenas à vista
       },
       external_reference: order.id,
       statement_descriptor: (process.env.PIX_MERCHANT_NAME || 'Reflora').slice(0, 20),
@@ -1538,6 +1534,13 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
     const db = readDatabase();
     db.orders.unshift(order);
     writeDatabase(db);
+
+    console.log('Pedido criado:', {
+      id: order.id,
+      total: order.total,
+      shipping: order.shipping?.price,
+      itemsTotal: order.items.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0)
+    });
 
     const [pix, mercadoPago] = await Promise.all([
       buildPixData({ amount: order.total, txid: order.id, description: `Pedido ${order.id}` }),

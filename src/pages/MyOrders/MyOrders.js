@@ -211,12 +211,12 @@ export default function MyOrders() {
                     <div className={styles.summary}>
                       <div className={styles.summaryRow}>
                         <span>Subtotal:</span>
-                        <span>{formatPrice(order.total - (order.shipping || 0))}</span>
+                        <span>{formatPrice(order.items.reduce((sum, item) => sum + (item.priceValue * item.quantity), 0))}</span>
                       </div>
-                      {order.shipping && (
+                      {order.shipping?.price && (
                         <div className={styles.summaryRow}>
                           <span>Frete:</span>
-                          <span>{formatPrice(order.shipping)}</span>
+                          <span>{order.shipping.formattedPrice || formatPrice(order.shipping.price)}</span>
                         </div>
                       )}
                       <div className={`${styles.summaryRow} ${styles.totalRow}`}>
