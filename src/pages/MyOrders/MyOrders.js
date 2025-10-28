@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { apiFetch } from '../../utils/api';
 import styles from './MyOrders.module.css';
 
 export default function MyOrders() {
@@ -20,10 +21,9 @@ export default function MyOrders() {
 
   async function fetchOrders() {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_URL}/api/orders/my-orders`, {
+      const response = await apiFetch('/api/orders/my-orders', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -34,9 +34,7 @@ export default function MyOrders() {
       }
 
       const data = await response.json();
-      // Ordenar por data mais recente
-      const sortedOrders = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      setOrders(sortedOrders);
+      setOrders(data);
     } catch (err) {
       console.error('Erro ao buscar pedidos:', err);
       setError('Não foi possível carregar seus pedidos.');
