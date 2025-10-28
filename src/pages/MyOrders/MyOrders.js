@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 import styles from './MyOrders.module.css';
@@ -10,16 +10,7 @@ export default function MyOrders() {
   const [error, setError] = useState(null);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
 
-  useEffect(() => {
-    if (!user || !token) {
-      setLoading(false);
-      return;
-    }
-    
-    fetchOrders();
-  }, [user, token]);
-
-  async function fetchOrders() {
+  const fetchOrders = useCallback(async () => {
     if (!token) {
       setError('Você precisa fazer login para ver seus pedidos.');
       setLoading(false);
@@ -53,7 +44,16 @@ export default function MyOrders() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (!user || !token) {
+      setLoading(false);
+      return;
+    }
+    
+    fetchOrders();
+  }, [user, token, fetchOrders]);
 
   function formatDate(dateString) {
     const date = new Date(dateString);

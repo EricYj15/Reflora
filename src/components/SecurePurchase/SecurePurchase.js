@@ -28,8 +28,9 @@ const SecurePurchase = () => {
           <article className={styles.card}>
             <h3>2. Pagamento protegido</h3>
             <ul>
-              <li>Confirme os dados no resumo e escolha PIX ou link seguro do Mercado Pago.</li>
-              <li>O comprovante do PIX e o status do Mercado Pago ficam registrados com o pedido.</li>
+              <li>Confirme os dados no resumo e clique para pagar.</li>
+              <li>Escolha PIX, cartão ou boleto no Mercado Pago.</li>
+              <li>O status do pagamento fica registrado com o pedido.</li>
               <li>Cartão de crédito, débito e boleto disponíveis diretamente pelo checkout Mercado Pago.</li>
             </ul>
           </article>
@@ -54,7 +55,7 @@ const SecurePurchase = () => {
               Preenche os dados no checkout e aceita os termos de devolução.
             </li>
             <li>
-              Salva o pedido, paga via QR Code PIX ou Mercado Pago e recebe confirmação por e-mail/WhatsApp.
+              Salva o pedido e paga via Mercado Pago (PIX, cartão ou boleto). Confirmação automática.
             </li>
             <li>
               Reflora valida o comprovante, prepara o envio e atualiza o cliente com o rastreio.

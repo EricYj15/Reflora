@@ -346,7 +346,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
             <p className={styles.kicker}>Finalize sua compra</p>
             <h2>Dados para entrega e pagamento</h2>
             <p className={styles.subtitle}>
-              Preencha os dados abaixo para registrar a venda e gerar o QR Code PIX. Os pedidos ficam salvos no painel para consulta.
+              Preencha os dados abaixo para registrar seu pedido. O pagamento será feito pelo Mercado Pago (PIX, cartão ou boleto).
             </p>
             <p className={styles.authHint}>
               {authLoading
@@ -555,18 +555,18 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
             {error && <p className={styles.error}>{error}</p>}
 
             <button type="submit" disabled={submitting} className={styles.submitButton}>
-              {submitting ? 'Gerando pedido...' : 'Registrar pedido e gerar link de pagamento'}
+              {submitting ? 'Gerando pedido...' : 'Registrar pedido'}
             </button>
           </form>
 
           <div className={styles.paymentPanel}>
             <div className={styles.mpCard}>
-              <h3>Pagamento Seguro (Mercado Pago)</h3>
+              <h3>Pagamento Seguro</h3>
               {success ? (
                 mpData?.available ? (
                   <>
                     <p className={styles.mpInfo}>
-                      Use o checkout Mercado Pago para pagar com <strong>PIX</strong>, cartão de crédito, débito ou boleto com toda a proteção da plataforma.
+                      Use o checkout Mercado Pago para pagar com <strong>PIX, cartão de crédito, débito ou boleto</strong> com toda a proteção da plataforma.
                     </p>
                     <a
                       href={mpData.initPoint || mpData.sandboxInitPoint}
@@ -577,7 +577,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
                       Pagar agora com Mercado Pago
                     </a>
                     <p className={styles.mpDisclaimer}>
-                      O link abre em outra aba onde você pode escolher PIX, cartão ou boleto. Após a confirmação do pagamento, você receberá um e-mail de confirmação.
+                      O link abre em outra aba onde você pode escolher a forma de pagamento. Após a confirmação, você receberá um e-mail.
                     </p>
                   </>
                 ) : (

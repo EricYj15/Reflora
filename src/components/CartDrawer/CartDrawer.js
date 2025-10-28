@@ -46,7 +46,7 @@ const CartDrawer = ({ open, items, onClose, onRemove, onIncrement, onDecrement, 
             <strong>R$ {subtotal.toFixed(2)}</strong>
           </div>
           <p className={styles.notice}>
-            Pagamento seguro: revise seus itens e finalize para gerar o QR Code PIX com garantia Reflora.
+            Pagamento seguro: revise seus itens e finalize para pagar com PIX, cartão ou boleto via Mercado Pago.
           </p>
           <button
             type="button"
