@@ -166,40 +166,67 @@ const AdminDashboard = () => {
       return;
     }
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('images', file);
-    });
+    // Validar tamanho dos arquivos (5MB cada)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    if (invalidFiles.length > 0) {
+      showError(`Alguns arquivos são muito grandes. Máximo: 5MB por arquivo.`);
+      event.target.value = '';
+      return;
+    }
+
+    // Validar tipo dos arquivos
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const invalidTypes = files.filter(file => !validTypes.includes(file.type));
+    if (invalidTypes.length > 0) {
+      showError(`Apenas imagens JPG, PNG e WebP são permitidas.`);
+      event.target.value = '';
+      return;
+    }
 
     setUploading(true);
 
     try {
-      const response = await apiFetch('/api/uploads/images', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: formData
+      console.log('📤 Fazendo upload para Cloudinary...');
+      console.log('📦 Número de arquivos:', files.length);
+      
+      // Cloudinary configuration
+      const CLOUD_NAME = 'df3pdowi0';
+      const UPLOAD_PRESET = 'reflora_uploads';
+      const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+
+      // Upload cada arquivo para o Cloudinary
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', UPLOAD_PRESET);
+        formData.append('folder', 'reflora');
+
+        const response = await fetch(CLOUDINARY_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error('Falha ao fazer upload da imagem');
+        }
+
+        const data = await response.json();
+        return data.secure_url; // URL permanente da imagem
       });
 
-      const data = await response.json();
-
-      if (!response.ok || data.success === false) {
-        throw new Error(data.message || 'Não foi possível enviar as imagens.');
-      }
-
-      const urls = Array.isArray(data.urls) ? data.urls : [];
-      if (urls.length === 0) {
-        throw new Error('Nenhuma imagem válida foi retornada.');
-      }
+      const urls = await Promise.all(uploadPromises);
+      console.log('✅ URLs do Cloudinary:', urls);
 
       setForm((prev) => ({
         ...prev,
         images: [...prev.images, ...urls]
       }));
 
-      showFeedback('Imagens adicionadas com sucesso.');
+      showFeedback(`${urls.length} imagem(ns) adicionada(s) com sucesso.`);
     } catch (err) {
-      console.error(err);
-      showError(err.message || 'Falha ao subir imagens.');
+      console.error('❌ Erro no upload:', err);
+      showError(err.message || 'Falha ao fazer upload das imagens.');
     } finally {
       setUploading(false);
       event.target.value = '';
