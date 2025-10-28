@@ -112,6 +112,13 @@ export const AuthProvider = ({ children }) => {
           }
         });
 
+        // Se o servidor retornou um novo token, atualizar
+        if (data.token && data.token !== token) {
+          console.log('Token atualizado pelo servidor');
+          setStoredToken(data.token);
+          setToken(data.token);
+        }
+
         if (isMounted) {
           setUser(enhanceUser(data.user || null));
         }

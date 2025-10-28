@@ -1288,20 +1288,49 @@ app.post('/api/auth/google', async (req, res) => {
 });
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
-  const db = readUsers();
-  const user = db.users.find((u) => u.id === req.userId);
+  try {
+    const db = readUsers();
+    let user = db.users.find((u) => u.id === req.userId);
 
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+    // Se o usuário não foi encontrado, tentar buscar pelo email
+    if (!user && req.userEmail) {
+      console.log(`Usuário não encontrado pelo ID ${req.userId}, buscando pelo email ${req.userEmail}`);
+      user = db.users.find((u) => u.email === req.userEmail);
+      
+      if (user) {
+        console.log(`Usuário encontrado pelo email, atualizando token...`);
+        // Token tem ID antigo, usuário foi recriado. Vamos recriar o token.
+        const newToken = createTokenForUser(user);
+        return res.json({ 
+          success: true, 
+          user: sanitizePublicUser(user),
+          token: newToken,
+          message: 'Token atualizado'
+        });
+      }
+    }
+
+    if (!user) {
+      console.error(`Usuário não encontrado: userId=${req.userId}, userEmail=${req.userEmail}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuário não encontrado. Faça login novamente.',
+        userId: req.userId,
+        userEmail: req.userEmail
+      });
+    }
+
+    const role = ensureRole(user);
+    if (role !== user.role) {
+      user.role = role;
+      writeUsers(db);
+    }
+
+    res.json({ success: true, user: sanitizePublicUser(user) });
+  } catch (error) {
+    console.error('Erro ao buscar usuário:', error);
+    res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
   }
-
-  const role = ensureRole(user);
-  if (role !== user.role) {
-    user.role = role;
-    writeUsers(db);
-  }
-
-  res.json({ success: true, user: sanitizePublicUser(user) });
 });
 
 app.get('/api/health', (_req, res) => {
