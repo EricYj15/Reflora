@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './AdminDashboard.module.css';
 import { useAuth } from '../../context/AuthContext';
+import { apiFetch } from '../../utils/api';
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
 
@@ -81,7 +82,7 @@ const AdminDashboard = () => {
 
     setOrdersLoading(true);
     try {
-      const response = await fetch('/api/orders', {
+      const response = await apiFetch('/api/orders', {
         headers: authHeaders
       });
       const data = await response.json();
@@ -100,7 +101,7 @@ const AdminDashboard = () => {
   const fetchProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      const response = await fetch('/api/products');
+      const response = await apiFetch('/api/products');
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.message || 'Não foi possível carregar os produtos.');
@@ -173,7 +174,7 @@ const AdminDashboard = () => {
     setUploading(true);
 
     try {
-      const response = await fetch('/api/uploads/images', {
+      const response = await apiFetch('/api/uploads/images', {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData
@@ -231,7 +232,7 @@ const AdminDashboard = () => {
 
     try {
       setSaving(true);
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await apiFetch(`/api/products/${productId}`, {
         method: 'DELETE',
         headers: authHeaders
       });
@@ -299,7 +300,7 @@ const AdminDashboard = () => {
       const endpoint = editingId ? `/api/products/${editingId}` : '/api/products';
       const method = editingId ? 'PUT' : 'POST';
 
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method,
         headers: authHeaders,
         body: JSON.stringify(payload)

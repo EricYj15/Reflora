@@ -2,6 +2,29 @@
 
 Website oficial da **Reflora**, uma marca brasileira de moda upcycling que transforma peças esquecidas em obras de arte únicas.
 
+## ⚠️ ATENÇÃO: Problema de Login/Cadastro Resolvido
+
+Se você está acessando o site em produção (https://reflora-zeta.vercel.app) e está recebendo o erro **"Não foi possível processar a solicitação"** ao tentar fazer login ou cadastro:
+
+### 🚨 CORREÇÃO RÁPIDA
+👉 **[Abra CORRECAO_RAPIDA.md](CORRECAO_RAPIDA.md)** - Solução em 3 passos (5 minutos)
+
+### 📚 DOCUMENTAÇÃO COMPLETA
+
+| Você precisa... | Documento | Tempo |
+|----------------|-----------|-------|
+| 🚨 Corrigir erro de login | [CORRECAO_RAPIDA.md](CORRECAO_RAPIDA.md) | 3 min |
+| 🚀 Fazer deploy completo | [DEPLOY.md](DEPLOY.md) | 30-60 min |
+| ⚙️ Configurar Vercel | [CONFIGURACAO_VERCEL.md](CONFIGURACAO_VERCEL.md) | 5 min |
+| ✅ Verificar deploy | [CHECKLIST_DEPLOY.md](CHECKLIST_DEPLOY.md) | 10 min |
+| ❓ Tirar dúvidas | [FAQ.md](FAQ.md) | Varia |
+| 📁 Ver estrutura | [ESTRUTURA_PROJETO.md](ESTRUTURA_PROJETO.md) | 5 min |
+| 📖 Índice completo | [INDICE.md](INDICE.md) | 2 min |
+
+**Resumo**: O backend precisa estar hospedado e a variável `REACT_APP_API_URL` precisa estar configurada no Vercel.
+
+---
+
 ## ✨ Sobre o Projeto
 
 Este é um site de lançamento desenvolvido com React.js que incorpora o conceito poético de "Flores Noturnas" - uma experiência imersiva que convida os visitantes a explorarem um jardim secreto digital à meia-noite, onde cada peça de roupa única desabrocha sob a luz das estrelas.

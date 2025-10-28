@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './Checkout.module.css';
 import { useAuth } from '../../context/AuthContext';
+import { apiFetch } from '../../utils/api';
 
 const initialForm = {
   name: '',
@@ -68,7 +69,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/orders', {
+      const res = await apiFetch('/api/orders', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
@@ -131,7 +132,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
     setShippingLoading(true);
 
     try {
-      const response = await fetch('/api/shipping/quote', {
+      const response = await apiFetch('/api/shipping/quote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -286,7 +287,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/orders', {
+      const response = await apiFetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './ProductGrid.module.css';
 import { products as fallbackProducts } from '../../data/products';
+import { apiFetch } from '../../utils/api';
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
 
@@ -55,7 +56,7 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
 
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await apiFetch('/api/products');
         const data = await response.json();
 
         if (!isMounted) {

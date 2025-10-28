@@ -16,6 +16,9 @@ const AuthContext = createContext({
 
 const STORAGE_KEY = 'reflora_auth_token';
 
+// URL base da API - usa variável de ambiente em produção ou proxy em desenvolvimento
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 function getStoredToken() {
   if (typeof window === 'undefined') {
     return null;
@@ -40,10 +43,12 @@ function setStoredToken(token) {
 }
 
 async function requestJson(url, options = {}) {
+  // Adiciona o prefixo da API base se configurado
+  const fullUrl = API_BASE_URL ? `${API_BASE_URL}${url}` : url;
   let response;
 
   try {
-    response = await fetch(url, {
+    response = await fetch(fullUrl, {
       headers: {
         'Content-Type': 'application/json',
         ...(options.headers || {})
