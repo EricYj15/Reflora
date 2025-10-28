@@ -3,8 +3,8 @@
     {
       "id": 2,
       "name": "Vestido Eclipse",
-      "price": "R$ 245,00",
-      "priceValue": 245,
+      "price": "R$ 1,00",
+      "priceValue": 1,
       "description": "Um vestido único criado a partir de tecidos vintage, tingido à mão com cores que evocam o crepúsculo. Peça exclusiva.",
       "images": [
         "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800",

@@ -738,6 +738,13 @@ async function buildMercadoPagoData(order) {
         name: order.customer.name,
         email: order.customer.email
       },
+      payment_methods: {
+        excluded_payment_types: [
+          { id: 'ticket' }, // Boleto
+          { id: 'atm' } // Pagamento em caixa eletrônico
+        ],
+        installments: 1 // Apenas à vista
+      },
       external_reference: order.id,
       statement_descriptor: (process.env.PIX_MERCHANT_NAME || 'Reflora').slice(0, 20),
       back_urls: {

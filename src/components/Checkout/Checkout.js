@@ -570,62 +570,18 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
             {error && <p className={styles.error}>{error}</p>}
 
             <button type="submit" disabled={submitting} className={styles.submitButton}>
-              {submitting ? 'Gerando pedido...' : 'Registrar pedido e gerar PIX'}
+              {submitting ? 'Gerando pedido...' : 'Registrar pedido e gerar link de pagamento'}
             </button>
           </form>
 
           <div className={styles.paymentPanel}>
-            {success?.pix ? (
-              <div className={styles.pixCard}>
-                <h3>Pagamento PIX</h3>
-                {success.order && (
-                  <p className={styles.orderInfo}>
-                    Pedido <strong>#{success.order.id}</strong> • Total R$ {Number(success.order.total || grandTotal).toFixed(2)}
-                  </p>
-                )}
-                {success.order?.shipping && (
-                  <p className={styles.orderShippingInfo}>
-                    Frete ({success.order.shipping.deliveryEstimate || 'estimado'}): {success.order.shipping.formattedPrice}
-                  </p>
-                )}
-                {success.pix.available ? (
-                  <>
-                    <img src={success.pix.qrCode} alt="QR Code para pagamento via PIX" className={styles.qrCode} />
-                    <p className={styles.pixInstruction}>
-                      Abra o app do seu banco, escolha pagar via QR Code e escaneie a imagem. Você também pode copiar o código abaixo e colar no Internet Banking.
-                    </p>
-                    <textarea
-                      readOnly
-                      value={success.pix.payload}
-                      rows={4}
-                      className={styles.pixPayload}
-                    />
-                    <button type="button" onClick={copyPixPayload} className={styles.copyButton}>
-                      Copiar código PIX
-                    </button>
-                  </>
-                ) : (
-                  <p className={styles.pixUnavailable}>
-                    {success.pix.message || 'Configure suas informações PIX para habilitar o QR Code.'}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className={styles.placeholderCard}>
-                <h3>QR Code PIX</h3>
-                <p>
-                  Assim que você salvar um pedido, o QR Code PIX gerado aparecerá aqui automaticamente.
-                </p>
-              </div>
-            )}
-
             <div className={styles.mpCard}>
-              <h3>Cartão ou boleto (Mercado Pago)</h3>
+              <h3>Pagamento Seguro (Mercado Pago)</h3>
               {success ? (
                 mpData?.available ? (
                   <>
                     <p className={styles.mpInfo}>
-                      Use o checkout Mercado Pago para pagar com cartão de crédito, débito, boleto ou saldo em conta com toda a proteção da plataforma.
+                      Use o checkout Mercado Pago para pagar com <strong>PIX</strong>, cartão de crédito, débito ou boleto com toda a proteção da plataforma.
                     </p>
                     <a
                       href={mpData.initPoint || mpData.sandboxInitPoint}
@@ -633,20 +589,20 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
                       rel="noreferrer"
                       className={styles.mpButton}
                     >
-                      Abrir pagamento Mercado Pago
+                      Pagar agora com Mercado Pago
                     </a>
                     <p className={styles.mpDisclaimer}>
-                      O link abre em outra aba. Após a confirmação pelo Mercado Pago, atualize o status do pedido e informe o cliente.
+                      O link abre em outra aba onde você pode escolher PIX, cartão ou boleto. Após a confirmação do pagamento, você receberá um e-mail de confirmação.
                     </p>
                   </>
                 ) : (
                   <p className={styles.mpUnavailable}>
-                    {mpData?.message || 'Configure as credenciais do Mercado Pago no arquivo .env para liberar o pagamento por cartão.'}
+                    {mpData?.message || 'Configure as credenciais do Mercado Pago no arquivo .env para liberar o pagamento.'}
                   </p>
                 )
               ) : (
                 <p className={styles.mpInfo}>
-                  Complete os dados e salve o pedido para gerar o link seguro do Mercado Pago.
+                  Complete os dados e salve o pedido para gerar o link seguro de pagamento.
                 </p>
               )}
             </div>
