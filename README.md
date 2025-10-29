@@ -2,6 +2,24 @@
 
 Website oficial da **Reflora**, uma marca brasileira de moda upcycling que transforma peças esquecidas em obras de arte únicas.
 
+## 🚨 PENDENTE: Configurar Webhook do Mercado Pago
+
+**STATUS:** ⏳ **AGUARDANDO CONFIGURAÇÃO** 
+
+### ❗ Por que é importante?
+Sem o webhook configurado, o status dos pedidos **NÃO será atualizado automaticamente** após o pagamento. Os clientes ficarão com status "Aguardando Pagamento" mesmo depois de pagar.
+
+### 📋 O que precisa fazer:
+1. [ ] Fazer redeploy do backend no Railway/Render
+2. [ ] Acessar painel do Mercado Pago
+3. [ ] Configurar webhook: `https://SEU-BACKEND/api/webhooks/mercadopago`
+4. [ ] Testar com pedido real
+
+### 📖 Guia completo:
+👉 **[Abra CONFIGURAR_WEBHOOK_MERCADOPAGO.md](CONFIGURAR_WEBHOOK_MERCADOPAGO.md)** - Passo a passo detalhado
+
+---
+
 ## ⚠️ ATENÇÃO: Problema de Login/Cadastro Resolvido
 
 Se você está acessando o site em produção (https://reflora-zeta.vercel.app) e está recebendo o erro **"Não foi possível processar a solicitação"** ao tentar fazer login ou cadastro:
@@ -14,6 +32,7 @@ Se você está acessando o site em produção (https://reflora-zeta.vercel.app) 
 | Você precisa... | Documento | Tempo |
 |----------------|-----------|-------|
 | 🚨 Corrigir erro de login | [CORRECAO_RAPIDA.md](CORRECAO_RAPIDA.md) | 3 min |
+| ⚡ Configurar webhook MP | [CONFIGURAR_WEBHOOK_MERCADOPAGO.md](CONFIGURAR_WEBHOOK_MERCADOPAGO.md) | 10 min |
 | 🚀 Fazer deploy completo | [DEPLOY.md](DEPLOY.md) | 30-60 min |
 | ⚙️ Configurar Vercel | [CONFIGURACAO_VERCEL.md](CONFIGURACAO_VERCEL.md) | 5 min |
 | ✅ Verificar deploy | [CHECKLIST_DEPLOY.md](CHECKLIST_DEPLOY.md) | 10 min |
@@ -45,6 +64,7 @@ Este é um site de lançamento desenvolvido com React.js que incorpora o conceit
 - **Gestão de Tamanhos PP/P/M/G**: Controle granular de disponibilidade diretamente no painel
 - **Seção Garantia & Segurança**: Explica políticas de devolução, fluxo de pagamento e canais de suporte
 - **Integração Mercado Pago**: Link seguro para cartões, boleto e saldo direto da plataforma
+- **Webhook Automático MP**: Atualiza status dos pedidos automaticamente após pagamento ✨ NOVO
 - **Manifesto Poético**: Seção narrativa centralizada
 - **Footer Interativo**: Formulário de contato integrado com Formspree
 - **Design Responsivo**: Mobile-first com adaptação para todos os dispositivos
