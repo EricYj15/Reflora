@@ -177,6 +177,7 @@
   justify-content: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .sizeBadge {
@@ -197,12 +198,19 @@
 .sizeAvailable {
   border-color: rgba(95, 138, 139, 0.85);
   color: var(--ink);
+  font-weight: 600;
 }
 
 .sizeUnavailable {
   border-color: rgba(128, 128, 128, 0.3);
   color: rgba(128, 128, 128, 0.65);
   text-decoration: line-through;
+}
+
+.noSizes {
+  font-size: 0.85rem;
+  color: rgba(128, 128, 128, 0.7);
+  font-style: italic;
 }
 
 /* Responsive */
