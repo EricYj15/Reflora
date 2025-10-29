@@ -1,13 +1,11 @@
 // FILE: src/components/ProductModal/ProductModal.js
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import styles from './ProductModal.module.css';
 
 const ProductModal = ({ product, onClose, onAddToCart }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const modalRef = useRef(null);
-  const navigate = useNavigate();
 
   const handleBuyNow = () => {
     // Adicionar ao carrinho
@@ -15,7 +13,7 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
     // Fechar modal
     onClose();
     // Redirecionar para checkout
-    navigate('/checkout');
+    window.location.hash = '#checkout';
   };
 
   useEffect(() => {
