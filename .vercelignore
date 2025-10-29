@@ -2,8 +2,8 @@
 server/
 server/**
 
-# Node modules
-node_modules/
+# Node modules (Vercel instala automaticamente)
+# node_modules/
 
 # Arquivos de ambiente locais
 .env.local
@@ -20,9 +20,26 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Arquivos de documentação
-*.md
-!README.md
+# Arquivos de documentação (exceto README)
+CHECKLIST_DEPLOY.md
+CLOUDINARY_PRODUCAO.md
+CONFIGURACAO_VERCEL.md
+CORRECAO_MENU_ZINDEX.md
+CORRECAO_RAPIDA.md
+CORRECAO_UPLOAD_IMAGENS.md
+DEPLOY.md
+ESTRUTURA_PROJETO.md
+EXPLICACAO_PROBLEMA_MENU.md
+FAQ.md
+INDICE.md
+INICIO.md
+INICIO_RAPIDO.md
+MELHORIAS_HEADER_MOBILE.md
+MELHORIAS_HEADER_MOBILE_v2.md
+MENU_MOBILE_FINAL.md
+POR_QUE_NAO_VERCEL.md
+PROJETO_COMPLETO.md
+RESUMO_ALTERACOES.md
+RESUMO_EXECUTIVO.md
 
-# Build local
-build/
+# NÃO ignorar a pasta build - o Vercel precisa dela!
