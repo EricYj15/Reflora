@@ -801,8 +801,16 @@ async function buildMercadoPagoData(order) {
       unit_price: Number(item.priceValue) || 0
     }));
 
-    // Adicionar frete como item separado se existir
-    const shippingPrice = order.shipping?.price || 0;
+    // Verificar se tem cupom aplicado e calcular frete com desconto
+    let shippingPrice = order.shipping?.price || 0;
+    const hasCoupon = order.coupon && order.coupon.active;
+    
+    // Se o cupom oferece frete grátis, zerar o valor do frete
+    if (hasCoupon && order.coupon.freeShipping) {
+      shippingPrice = 0;
+    }
+
+    // Adicionar frete como item separado se existir e for maior que 0
     if (shippingPrice > 0) {
       items.push({
         title: 'Frete',
@@ -812,7 +820,30 @@ async function buildMercadoPagoData(order) {
       });
     }
 
+    // Se houver desconto percentual, aplicar aos itens
+    if (hasCoupon && order.coupon.discountPercent > 0) {
+      const discountMultiplier = 1 - (order.coupon.discountPercent / 100);
+      items.forEach(item => {
+        if (item.title !== 'Frete') {
+          item.unit_price = Math.max(0, item.unit_price * discountMultiplier);
+        }
+      });
+    }
+
+    // Se houver desconto fixo, adicionar como item negativo
+    if (hasCoupon && order.coupon.discountAmount > 0) {
+      items.push({
+        title: `Desconto - Cupom ${order.coupon.code}`,
+        quantity: 1,
+        currency_id: 'BRL',
+        unit_price: -Math.abs(Number(order.coupon.discountAmount))
+      });
+    }
+
     console.log('Mercado Pago - Itens:', JSON.stringify(items, null, 2));
+    if (hasCoupon) {
+      console.log('Mercado Pago - Cupom aplicado:', order.coupon.code, order.coupon);
+    }
 
     const preference = {
       items: items,
