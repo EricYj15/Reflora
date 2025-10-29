@@ -7,15 +7,6 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const modalRef = useRef(null);
 
-  const handleBuyNow = () => {
-    // Adicionar ao carrinho
-    onAddToCart();
-    // Fechar modal
-    onClose();
-    // Redirecionar para checkout
-    window.location.hash = '#checkout';
-  };
-
   useEffect(() => {
     // Bloquear scroll do body quando o modal está aberto
     document.body.style.overflow = 'hidden';
@@ -104,12 +95,6 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
                 onClose();
               }}>
                 Adicionar ao carrinho
-              </button>
-              <button 
-                className={styles.purchaseButton}
-                onClick={handleBuyNow}
-              >
-                Comprar agora
               </button>
             </div>
           </div>

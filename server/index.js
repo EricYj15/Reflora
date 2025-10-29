@@ -1876,6 +1876,111 @@ app.get('/api/tracking/:trackingCode', async (req, res) => {
   }
 });
 
+// Webhook do Mercado Pago para notificações de pagamento
+app.post('/api/webhooks/mercadopago', async (req, res) => {
+  try {
+    console.log('📩 Webhook do Mercado Pago recebido:', JSON.stringify(req.body, null, 2));
+
+    const { type, data } = req.body;
+
+    // Mercado Pago envia diferentes tipos de notificações
+    // type: 'payment' = notificação de pagamento
+    if (type === 'payment' && data?.id) {
+      const paymentId = data.id;
+      
+      console.log(`🔍 Consultando pagamento ${paymentId} no Mercado Pago...`);
+
+      // Consultar detalhes do pagamento na API do Mercado Pago
+      const accessToken = process.env.MP_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        console.error('❌ MP_ACCESS_TOKEN não configurado');
+        return res.status(200).json({ success: false, message: 'Token não configurado' });
+      }
+
+      try {
+        const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+
+        if (!response.ok) {
+          console.error(`❌ Erro ao consultar pagamento: ${response.status}`);
+          return res.status(200).json({ success: false, message: 'Erro ao consultar pagamento' });
+        }
+
+        const payment = await response.json();
+        console.log('💳 Detalhes do pagamento:', {
+          id: payment.id,
+          status: payment.status,
+          status_detail: payment.status_detail,
+          external_reference: payment.external_reference,
+          transaction_amount: payment.transaction_amount
+        });
+
+        // Verificar se o pagamento foi aprovado
+        if (payment.status === 'approved' && payment.external_reference) {
+          const orderId = payment.external_reference;
+          
+          console.log(`✅ Pagamento aprovado para pedido ${orderId}`);
+
+          // Atualizar status do pedido no banco de dados
+          const db = readDatabase();
+          const order = db.orders.find(o => o.id === orderId);
+
+          if (!order) {
+            console.error(`❌ Pedido ${orderId} não encontrado`);
+            return res.status(200).json({ success: false, message: 'Pedido não encontrado' });
+          }
+
+          // Só atualiza se estiver aguardando pagamento
+          if (order.status === 'pending_payment') {
+            order.status = 'paid';
+            order.updatedAt = new Date().toISOString();
+            order.paidAt = new Date().toISOString();
+            order.paymentId = payment.id;
+            
+            if (!order.statusHistory) {
+              order.statusHistory = [];
+            }
+            
+            order.statusHistory.push({
+              status: 'paid',
+              timestamp: new Date().toISOString(),
+              description: `Pagamento confirmado pelo Mercado Pago (ID: ${payment.id})`
+            });
+
+            writeDatabase(db);
+
+            console.log(`🎉 Pedido ${orderId} atualizado para 'paid'`);
+            
+            // Aqui você pode adicionar lógica adicional:
+            // - Enviar email de confirmação
+            // - Notificar o admin
+            // - Integrar com sistema de estoque
+          } else {
+            console.log(`⚠️ Pedido ${orderId} já está no status: ${order.status}`);
+          }
+        } else {
+          console.log(`⏳ Pagamento ${paymentId} não está aprovado ainda: ${payment.status}`);
+        }
+
+      } catch (error) {
+        console.error('❌ Erro ao processar pagamento:', error);
+        return res.status(200).json({ success: false, message: 'Erro ao processar pagamento' });
+      }
+    }
+
+    // Sempre retornar 200 para o Mercado Pago não reenviar
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('❌ Erro no webhook do Mercado Pago:', error);
+    res.status(200).json({ success: false, message: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor iniciado na porta ${PORT}`);
 });

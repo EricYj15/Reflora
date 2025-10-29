@@ -68,6 +68,12 @@ const AdminDashboard = () => {
     setTimeout(() => setFeedback(null), 4000);
   }, []);
 
+  const showSuccess = useCallback((message) => {
+    setError(null);
+    setFeedback({ message, type: 'success' });
+    setTimeout(() => setFeedback(null), 4000);
+  }, []);
+
   const showError = useCallback((message) => {
     setFeedback(null);
     setError(message);
