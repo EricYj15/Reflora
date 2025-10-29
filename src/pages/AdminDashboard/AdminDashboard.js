@@ -6,7 +6,7 @@ import { apiFetch } from '../../utils/api';
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G', '36', '37', '38', '39', '40', '41', '42', '43', '44'];
 
-const createDefaultSizes = () => SIZE_KEYS.reduce((acc, size) => ({ ...acc, [size]: true }), {});
+const createDefaultSizes = () => SIZE_KEYS.reduce((acc, size) => ({ ...acc, [size]: false }), {}); // Mudado para false
 
 const normalizeSizes = (rawSizes) => {
   const normalized = createDefaultSizes();
@@ -28,6 +28,7 @@ const createEmptyProduct = () => ({
   description: '',
   priceValue: '',
   stock: '1',
+  sizeType: 'clothing', // 'clothing' ou 'numeric'
   sizes: createDefaultSizes(),
   images: []
 });
@@ -194,6 +195,16 @@ const AdminDashboard = () => {
     }));
   };
 
+  const handleSizeTypeChange = (event) => {
+    const newType = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      sizeType: newType,
+      // Limpar tamanhos ao trocar de tipo
+      sizes: createDefaultSizes()
+    }));
+  };
+
   const handleRemoveImage = (index) => {
     setForm((prev) => ({
       ...prev,
@@ -279,12 +290,32 @@ const AdminDashboard = () => {
   const handleEditProduct = (product) => {
     setEditingId(product.id);
     setActiveTab('products');
+    
+    // Detectar tipo de tamanho baseado nos tamanhos marcados
+    const clothingSizes = ['PP', 'P', 'M', 'G'];
+    const numericSizes = ['36', '37', '38', '39', '40', '41', '42', '43', '44'];
+    const sizes = normalizeSizes(product.sizes);
+    
+    const hasClothing = clothingSizes.some(size => sizes[size]);
+    const hasNumeric = numericSizes.some(size => sizes[size]);
+    
+    let sizeType = 'clothing';
+    if (hasNumeric && !hasClothing) {
+      sizeType = 'numeric';
+    } else if (hasClothing && hasNumeric) {
+      // Se tem ambos, prioriza o que tem mais marcados
+      const clothingCount = clothingSizes.filter(size => sizes[size]).length;
+      const numericCount = numericSizes.filter(size => sizes[size]).length;
+      sizeType = numericCount > clothingCount ? 'numeric' : 'clothing';
+    }
+    
     setForm({
       name: product.name || '',
       description: product.description || '',
       priceValue: String(product.priceValue ?? ''),
       stock: String(Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0),
-      sizes: normalizeSizes(product.sizes),
+      sizeType,
+      sizes: sizes,
       images: Array.isArray(product.images) ? [...product.images] : []
     });
   };
@@ -585,43 +616,57 @@ const AdminDashboard = () => {
               <fieldset className={styles.sizeFieldset}>
                 <legend>Tamanhos disponíveis</legend>
                 
-                <div className={styles.sizeGroup}>
-                  <h4 className={styles.sizeGroupTitle}>Roupas</h4>
-                  <div className={styles.sizeOptions}>
-                    {['PP', 'P', 'M', 'G'].map((size) => (
-                      <label
-                        key={size}
-                        className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!form.sizes[size]}
-                          onChange={() => handleToggleSize(size)}
-                        />
-                        {size}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <label className={styles.sizeTypeSelector}>
+                  Tipo de produto:
+                  <select 
+                    value={form.sizeType || 'clothing'} 
+                    onChange={handleSizeTypeChange}
+                    className={styles.sizeTypeSelect}
+                  >
+                    <option value="clothing">Roupas (PP, P, M, G)</option>
+                    <option value="numeric">Calçados/Calças (36-44)</option>
+                  </select>
+                </label>
 
-                <div className={styles.sizeGroup}>
-                  <h4 className={styles.sizeGroupTitle}>Calçados/Calças</h4>
-                  <div className={styles.sizeOptions}>
-                    {['36', '37', '38', '39', '40', '41', '42', '43', '44'].map((size) => (
-                      <label
-                        key={size}
-                        className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!form.sizes[size]}
-                          onChange={() => handleToggleSize(size)}
-                        />
-                        {size}
-                      </label>
-                    ))}
+                {form.sizeType === 'clothing' ? (
+                  <div className={styles.sizeGroup}>
+                    <h4 className={styles.sizeGroupTitle}>Tamanhos de Roupas</h4>
+                    <div className={styles.sizeOptions}>
+                      {['PP', 'P', 'M', 'G'].map((size) => (
+                        <label
+                          key={size}
+                          className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!form.sizes[size]}
+                            onChange={() => handleToggleSize(size)}
+                          />
+                          {size}
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className={styles.sizeGroup}>
+                    <h4 className={styles.sizeGroupTitle}>Tamanhos Numéricos</h4>
+                    <div className={styles.sizeOptions}>
+                      {['36', '37', '38', '39', '40', '41', '42', '43', '44'].map((size) => (
+                        <label
+                          key={size}
+                          className={`${styles.sizeOption} ${form.sizes[size] ? styles.sizeOptionActive : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!form.sizes[size]}
+                            onChange={() => handleToggleSize(size)}
+                          />
+                          {size}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </fieldset>
 
               <div className={styles.imageUploader}>

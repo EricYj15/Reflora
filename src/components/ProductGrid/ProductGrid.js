@@ -162,18 +162,18 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
                 {outOfStock ? 'Esgotado no momento' : `Estoque: ${product.stock}`}
               </p>
               <div className={styles.sizeRow} role="group" aria-label="Disponibilidade por tamanho">
-                {SIZE_KEYS.map((size) => {
-                  const available = Boolean(product.sizes?.[size]);
-                  return (
-                    <span
-                      key={`${product.id || index}-${size}`}
-                      className={`${styles.sizeBadge} ${available ? styles.sizeAvailable : styles.sizeUnavailable}`}
-                      aria-label={`Tamanho ${size} ${available ? 'disponível' : 'indisponível'}`}
-                    >
-                      {size}
-                    </span>
-                  );
-                })}
+                {SIZE_KEYS.filter(size => product.sizes?.[size]).map((size) => (
+                  <span
+                    key={`${product.id || index}-${size}`}
+                    className={`${styles.sizeBadge} ${styles.sizeAvailable}`}
+                    aria-label={`Tamanho ${size} disponível`}
+                  >
+                    {size}
+                  </span>
+                ))}
+                {SIZE_KEYS.filter(size => product.sizes?.[size]).length === 0 && (
+                  <span className={styles.noSizes}>Sem tamanhos disponíveis</span>
+                )}
               </div>
             </div>
           </div>

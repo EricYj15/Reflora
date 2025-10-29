@@ -716,11 +716,12 @@ function normalizeProductInput(payload = {}, existing = {}) {
     } else if (value != null) {
       acc[size] = Boolean(value);
     } else {
-      acc[size] = true;
+      acc[size] = false; // Mudado de true para false - não marca todos por padrão
     }
     return acc;
   }, {});
 
+  // Verificar se tem pelo menos um tamanho marcado
   if (!Object.values(sizes).some(Boolean)) {
     throw new Error('Selecione ao menos um tamanho disponível.');
   }

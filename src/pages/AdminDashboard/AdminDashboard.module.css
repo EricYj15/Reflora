@@ -287,6 +287,34 @@
   letter-spacing: 0.1em;
 }
 
+.sizeTypeSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: rgba(24, 32, 32, 0.75);
+  font-size: 0.9rem;
+}
+
+.sizeTypeSelect {
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(95, 138, 139, 0.24);
+  font: inherit;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sizeTypeSelect:hover {
+  border-color: rgba(95, 138, 139, 0.4);
+}
+
+.sizeTypeSelect:focus {
+  outline: 2px solid rgba(95, 138, 139, 0.6);
+  outline-offset: 2px;
+}
+
 .sizeGroup {
   display: flex;
   flex-direction: column;
