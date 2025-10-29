@@ -126,6 +126,22 @@
   font-size: 1.2rem;
 }
 
+.discountRow {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #28a745;
+}
+
+.discount {
+  color: #28a745;
+}
+
+.freeShipping {
+  color: #28a745;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 .emptyCart {
   font-family: 'Montserrat', sans-serif;
   color: rgba(46, 46, 43, 0.6);
