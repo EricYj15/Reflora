@@ -69,7 +69,7 @@ const SecurePurchase = () => {
             Canal direto pelo WhatsApp <a href="https://wa.me/5511966076801" target="_blank" rel="noreferrer">(11) 96607-6801</a> · Atendimento das 9h às 18h.
           </p>
           <p>
-            E-mail de suporte: <a href="mailto:sostahel@gmail.com">sostahel@gmail.com</a>
+            E-mail de suporte: <a href="mailto:reflorar123@gmail.com">reflorar123@gmail.com</a>
           </p>
         </div>
       </div>
