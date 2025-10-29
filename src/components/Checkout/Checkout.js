@@ -90,6 +90,11 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
   }, [fetchOrders]);
 
   useEffect(() => {
+    // Rolar para o topo quando o componente montar
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
     if (!user) {
       return;
     }

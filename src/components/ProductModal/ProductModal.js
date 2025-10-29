@@ -99,7 +99,10 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
             <p className={styles.description}>{product.description}</p>
             
             <div className={styles.actions}>
-              <button className={`${styles.purchaseButton} ${styles.primary}`} onClick={onAddToCart}>
+              <button className={`${styles.purchaseButton} ${styles.primary}`} onClick={() => {
+                onAddToCart();
+                onClose();
+              }}>
                 Adicionar ao carrinho
               </button>
               <button 
