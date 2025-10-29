@@ -227,7 +227,10 @@ function validateCoupon(code) {
       type: coupon.type,
       description: coupon.description,
       discount: coupon.discount || 0,
-      freeShipping: coupon.freeShipping || false
+      freeShipping: coupon.freeShipping || false,
+      active: true,
+      discountPercent: coupon.discountPercent || 0,
+      discountAmount: coupon.discountAmount || 0
     }
   };
 }
@@ -794,6 +797,10 @@ async function buildMercadoPagoData(order) {
   try {
     mercadopago.configure({ access_token: accessToken });
 
+    console.log('=== DEBUG MERCADO PAGO ===');
+    console.log('Order completa:', JSON.stringify(order, null, 2));
+    console.log('Cupom no pedido:', order.coupon);
+
     const items = order.items.map((item) => ({
       title: item.name,
       quantity: Number(item.quantity) || 1,
@@ -803,10 +810,15 @@ async function buildMercadoPagoData(order) {
 
     // Verificar se tem cupom aplicado e calcular frete com desconto
     let shippingPrice = order.shipping?.price || 0;
-    const hasCoupon = order.coupon && order.coupon.active;
+    const hasCoupon = order.coupon && (order.coupon.active || order.coupon.freeShipping || order.coupon.discount > 0);
+    
+    console.log('Frete original:', shippingPrice);
+    console.log('Tem cupom ativo?', hasCoupon);
+    console.log('Cupom oferece frete grátis?', order.coupon?.freeShipping);
     
     // Se o cupom oferece frete grátis, zerar o valor do frete
-    if (hasCoupon && order.coupon.freeShipping) {
+    if (order.coupon && order.coupon.freeShipping) {
+      console.log('APLICANDO FRETE GRÁTIS!');
       shippingPrice = 0;
     }
 
@@ -821,17 +833,20 @@ async function buildMercadoPagoData(order) {
     }
 
     // Se houver desconto percentual, aplicar aos itens
-    if (hasCoupon && order.coupon.discountPercent > 0) {
-      const discountMultiplier = 1 - (order.coupon.discountPercent / 100);
-      items.forEach(item => {
-        if (item.title !== 'Frete') {
-          item.unit_price = Math.max(0, item.unit_price * discountMultiplier);
-        }
-      });
+    if (order.coupon && (order.coupon.discountPercent > 0 || order.coupon.discount > 0)) {
+      const percent = order.coupon.discountPercent || order.coupon.discount || 0;
+      if (percent > 0) {
+        const discountMultiplier = 1 - (percent / 100);
+        items.forEach(item => {
+          if (item.title !== 'Frete') {
+            item.unit_price = Math.max(0, item.unit_price * discountMultiplier);
+          }
+        });
+      }
     }
 
     // Se houver desconto fixo, adicionar como item negativo
-    if (hasCoupon && order.coupon.discountAmount > 0) {
+    if (order.coupon && order.coupon.discountAmount > 0) {
       items.push({
         title: `Desconto - Cupom ${order.coupon.code}`,
         quantity: 1,
@@ -840,10 +855,12 @@ async function buildMercadoPagoData(order) {
       });
     }
 
-    console.log('Mercado Pago - Itens:', JSON.stringify(items, null, 2));
+    console.log('Mercado Pago - Itens finais:', JSON.stringify(items, null, 2));
+    console.log('Mercado Pago - Frete final:', shippingPrice);
     if (hasCoupon) {
       console.log('Mercado Pago - Cupom aplicado:', order.coupon.code, order.coupon);
     }
+    console.log('=== FIM DEBUG ===');
 
     const preference = {
       items: items,
@@ -1639,6 +1656,7 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
     const order = {
       id: orderId,
       userId: req.userId || null,
+      status: 'pending_payment', // pending_payment, paid, shipped, in_transit, delivered, cancelled
       customer: {
         name: customer.name.trim(),
         email: customer.email.trim(),
@@ -1672,7 +1690,15 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
         : null,
       coupon: appliedCoupon || null,
       total: Number(total) || 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusHistory: [
+        {
+          status: 'pending_payment',
+          timestamp: new Date().toISOString(),
+          description: 'Pedido criado, aguardando pagamento'
+        }
+      ]
     };
 
     const db = readDatabase();
@@ -1732,11 +1758,74 @@ app.patch('/api/orders/:orderId/tracking', authenticateToken, (req, res) => {
 
     order.trackingCode = trackingCode.trim().toUpperCase();
     order.trackingAddedAt = new Date().toISOString();
+    
+    // Atualizar status para "enviado" quando adiciona código de rastreamento
+    if (order.status === 'paid' || order.status === 'pending_payment') {
+      order.status = 'shipped';
+      order.updatedAt = new Date().toISOString();
+      if (!order.statusHistory) {
+        order.statusHistory = [];
+      }
+      order.statusHistory.push({
+        status: 'shipped',
+        timestamp: new Date().toISOString(),
+        description: `Pedido enviado. Código de rastreamento: ${order.trackingCode}`
+      });
+    }
+    
+    writeDatabase(db);
+
+    res.json({ success: false, order });
+  } catch (error) {
+    console.error('Erro ao adicionar código de rastreamento:', error);
+    res.status(500).json({ success: false, message: 'Erro ao atualizar pedido.' });
+  }
+});
+
+// Atualizar status do pedido (apenas admin)
+app.patch('/api/orders/:orderId/status', authenticateToken, (req, res) => {
+  try {
+    if (req.userRole !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    const { orderId } = req.params;
+    const { status, description } = req.body;
+
+    const validStatuses = ['pending_payment', 'paid', 'shipped', 'in_transit', 'delivered', 'cancelled'];
+    
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Status inválido. Use: pending_payment, paid, shipped, in_transit, delivered ou cancelled' 
+      });
+    }
+
+    const db = readDatabase();
+    const order = db.orders.find(o => o.id === orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Pedido não encontrado.' });
+    }
+
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    
+    order.statusHistory.push({
+      status,
+      timestamp: new Date().toISOString(),
+      description: description || `Status alterado para ${status}`
+    });
+    
     writeDatabase(db);
 
     res.json({ success: true, order });
   } catch (error) {
-    console.error('Erro ao adicionar código de rastreamento:', error);
+    console.error('Erro ao atualizar status do pedido:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar pedido.' });
   }
 });

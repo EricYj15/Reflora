@@ -77,26 +77,50 @@ export default function MyOrders() {
 
   function getStatusLabel(status) {
     const statusMap = {
-      pending: 'Aguardando Pagamento',
-      paid: 'Pago',
-      processing: 'Em Processamento',
-      shipped: 'Enviado',
+      pending_payment: 'Aguardando Pagamento',
+      paid: 'Pagamento Confirmado',
+      shipped: 'Pedido Enviado',
+      in_transit: 'Em Trânsito',
       delivered: 'Entregue',
       cancelled: 'Cancelado'
     };
-    return statusMap[status] || status;
+    return statusMap[status] || 'Processando';
   }
 
   function getStatusClass(status) {
     const classMap = {
-      pending: styles.statusPending,
+      pending_payment: styles.statusPending,
       paid: styles.statusPaid,
-      processing: styles.statusProcessing,
       shipped: styles.statusShipped,
+      in_transit: styles.statusInTransit,
       delivered: styles.statusDelivered,
       cancelled: styles.statusCancelled
     };
-    return classMap[status] || '';
+    return classMap[status] || styles.statusPending;
+  }
+
+  function getStatusIcon(status) {
+    const iconMap = {
+      pending_payment: '⏳',
+      paid: '✓',
+      shipped: '📦',
+      in_transit: '🚚',
+      delivered: '✓✓',
+      cancelled: '✗'
+    };
+    return iconMap[status] || '📋';
+  }
+
+  function getStatusStep(status) {
+    const stepMap = {
+      pending_payment: 1,
+      paid: 2,
+      shipped: 3,
+      in_transit: 4,
+      delivered: 5,
+      cancelled: 0
+    };
+    return stepMap[status] || 1;
   }
 
   function toggleOrderDetails(orderId) {
@@ -182,6 +206,48 @@ export default function MyOrders() {
 
               {expandedOrderId === order.id && (
                 <div className={styles.orderDetails}>
+                  {/* Barra de Progresso do Status */}
+                  {order.status !== 'cancelled' && (
+                    <div className={styles.statusProgress}>
+                      <div className={styles.progressSteps}>
+                        <div className={`${styles.step} ${getStatusStep(order.status) >= 1 ? styles.stepActive : ''}`}>
+                          <div className={styles.stepIcon}>⏳</div>
+                          <div className={styles.stepLabel}>Aguardando Pagamento</div>
+                        </div>
+                        <div className={`${styles.stepLine} ${getStatusStep(order.status) >= 2 ? styles.lineActive : ''}`} />
+                        <div className={`${styles.step} ${getStatusStep(order.status) >= 2 ? styles.stepActive : ''}`}>
+                          <div className={styles.stepIcon}>✓</div>
+                          <div className={styles.stepLabel}>Pagamento Confirmado</div>
+                        </div>
+                        <div className={`${styles.stepLine} ${getStatusStep(order.status) >= 3 ? styles.lineActive : ''}`} />
+                        <div className={`${styles.step} ${getStatusStep(order.status) >= 3 ? styles.stepActive : ''}`}>
+                          <div className={styles.stepIcon}>📦</div>
+                          <div className={styles.stepLabel}>Pedido Enviado</div>
+                        </div>
+                        <div className={`${styles.stepLine} ${getStatusStep(order.status) >= 4 ? styles.lineActive : ''}`} />
+                        <div className={`${styles.step} ${getStatusStep(order.status) >= 4 ? styles.stepActive : ''}`}>
+                          <div className={styles.stepIcon}>🚚</div>
+                          <div className={styles.stepLabel}>Em Trânsito</div>
+                        </div>
+                        <div className={`${styles.stepLine} ${getStatusStep(order.status) >= 5 ? styles.lineActive : ''}`} />
+                        <div className={`${styles.step} ${getStatusStep(order.status) >= 5 ? styles.stepActive : ''}`}>
+                          <div className={styles.stepIcon}>✓✓</div>
+                          <div className={styles.stepLabel}>Entregue</div>
+                        </div>
+                      </div>
+                      <div className={styles.currentStatus}>
+                        <strong>Status atual:</strong> {getStatusLabel(order.status)}
+                      </div>
+                    </div>
+                  )}
+
+                  {order.status === 'cancelled' && (
+                    <div className={styles.cancelledBanner}>
+                      <span className={styles.cancelIcon}>✗</span>
+                      <span>Este pedido foi cancelado</span>
+                    </div>
+                  )}
+
                   <div className={styles.section}>
                     <h3>Itens do Pedido</h3>
                     <div className={styles.items}>

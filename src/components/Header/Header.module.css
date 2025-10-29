@@ -59,15 +59,12 @@
   color: var(--wine);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.6rem;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .brandText {
