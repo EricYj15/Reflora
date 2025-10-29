@@ -241,6 +241,28 @@ export default function MyOrders() {
                     </div>
                   )}
 
+                  {/* Alerta de Pagamento Pendente */}
+                  {order.status === 'pending_payment' && order.mercadoPago?.available && (
+                    <div className={styles.paymentAlert}>
+                      <div className={styles.alertIcon}>⚠️</div>
+                      <div className={styles.alertContent}>
+                        <h4>Aguardando confirmação de pagamento</h4>
+                        <p>Realize o pagamento para que seu pedido seja processado. Você pode fechar este alerta após efetuar o pagamento.</p>
+                        <a 
+                          href={order.mercadoPago.initPoint || order.mercadoPago.sandboxInitPoint}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.paymentLink}
+                        >
+                          🔗 Abrir link de pagamento do Mercado Pago
+                        </a>
+                        <p className={styles.alertNote}>
+                          💡 <strong>Dica:</strong> O status será atualizado automaticamente após a confirmação do pagamento. Recarregue a página para ver as atualizações.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {order.status === 'cancelled' && (
                     <div className={styles.cancelledBanner}>
                       <span className={styles.cancelIcon}>✗</span>
