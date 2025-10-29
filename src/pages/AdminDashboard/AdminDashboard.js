@@ -222,9 +222,6 @@ const AdminDashboard = () => {
     setUploading(true);
 
     try {
-      console.log('📤 Fazendo upload para Cloudinary...');
-      console.log('📦 Número de arquivos:', files.length);
-      
       // Cloudinary configuration
       const CLOUD_NAME = 'df3pdowi0';
       const UPLOAD_PRESET = 'reflora_uploads';
@@ -243,7 +240,8 @@ const AdminDashboard = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Falha ao fazer upload da imagem');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || 'Falha ao fazer upload da imagem');
         }
 
         const data = await response.json();
@@ -251,7 +249,6 @@ const AdminDashboard = () => {
       });
 
       const urls = await Promise.all(uploadPromises);
-      console.log('✅ URLs do Cloudinary:', urls);
 
       setForm((prev) => ({
         ...prev,
@@ -260,7 +257,7 @@ const AdminDashboard = () => {
 
       showFeedback(`${urls.length} imagem(ns) adicionada(s) com sucesso.`);
     } catch (err) {
-      console.error('❌ Erro no upload:', err);
+      console.error('Erro no upload:', err);
       showError(err.message || 'Falha ao fazer upload das imagens.');
     } finally {
       setUploading(false);
