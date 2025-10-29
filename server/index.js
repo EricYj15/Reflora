@@ -28,6 +28,7 @@ const dbDir = path.join(__dirname, 'db');
 const dbFile = path.join(dbDir, 'orders.json');
 const usersFile = path.join(dbDir, 'users.json');
 const productsFile = path.join(dbDir, 'products.json');
+const couponsFile = path.join(dbDir, 'coupons.json');
 const uploadsDir = path.join(__dirname, 'uploads');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -118,6 +119,26 @@ if (!fs.existsSync(productsFile)) {
   fs.writeFileSync(productsFile, JSON.stringify({ products: productsSeed }, null, 2));
 }
 
+if (!fs.existsSync(couponsFile)) {
+  const defaultCoupons = {
+    coupons: [
+      {
+        code: 'ANAL',
+        type: 'free_shipping',
+        description: 'Frete grátis',
+        discount: 0,
+        freeShipping: true,
+        active: true,
+        expiresAt: null,
+        usageLimit: null,
+        usageCount: 0,
+        createdAt: new Date().toISOString()
+      }
+    ]
+  };
+  fs.writeFileSync(couponsFile, JSON.stringify(defaultCoupons, null, 2));
+}
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -164,6 +185,61 @@ function readProducts() {
 
 function writeProducts(data) {
   fs.writeFileSync(productsFile, JSON.stringify(data, null, 2));
+}
+
+function readCoupons() {
+  try {
+    const raw = fs.readFileSync(couponsFile, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed.coupons) ? parsed : { coupons: [] };
+  } catch (error) {
+    console.error('Erro ao ler cupons:', error);
+    return { coupons: [] };
+  }
+}
+
+function writeCoupons(data) {
+  fs.writeFileSync(couponsFile, JSON.stringify(data, null, 2));
+}
+
+function validateCoupon(code) {
+  const db = readCoupons();
+  const coupon = db.coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active);
+  
+  if (!coupon) {
+    return { valid: false, message: 'Cupom inválido ou expirado.' };
+  }
+
+  // Verificar se expirou
+  if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+    return { valid: false, message: 'Este cupom expirou.' };
+  }
+
+  // Verificar limite de uso
+  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+    return { valid: false, message: 'Este cupom atingiu o limite de uso.' };
+  }
+
+  return {
+    valid: true,
+    coupon: {
+      code: coupon.code,
+      type: coupon.type,
+      description: coupon.description,
+      discount: coupon.discount || 0,
+      freeShipping: coupon.freeShipping || false
+    }
+  };
+}
+
+function applyCoupon(code) {
+  const db = readCoupons();
+  const couponIndex = db.coupons.findIndex(c => c.code.toUpperCase() === code.toUpperCase());
+  
+  if (couponIndex !== -1) {
+    db.coupons[couponIndex].usageCount = (db.coupons[couponIndex].usageCount || 0) + 1;
+    writeCoupons(db);
+  }
 }
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
@@ -1394,6 +1470,31 @@ app.post('/api/shipping/quote', (req, res) => {
   }
 });
 
+app.post('/api/coupons/validate', (req, res) => {
+  try {
+    const { code } = req.body || {};
+    
+    if (!code || typeof code !== 'string' || code.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Informe o código do cupom.' });
+    }
+
+    const result = validateCoupon(code.trim());
+    
+    if (!result.valid) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+
+    res.json({ 
+      success: true, 
+      coupon: result.coupon,
+      message: `Cupom "${result.coupon.code}" aplicado com sucesso!`
+    });
+  } catch (error) {
+    console.error('Erro ao validar cupom:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível validar o cupom.' });
+  }
+});
+
 app.get('/api/products', (_req, res) => {
   const db = readProducts();
   res.json({ products: db.products.map((product) => sanitizeProduct(product)) });
@@ -1482,7 +1583,7 @@ app.delete('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
 
 app.post('/api/orders', attachUserIfPresent, async (req, res) => {
   try {
-    const { customer, address, items, total, shipping } = req.body;
+    const { customer, address, items, total, shipping, coupon } = req.body;
 
     if (!customer?.name || !customer?.email || !address?.street || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -1492,6 +1593,17 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
     }
 
     const orderId = createOrderId();
+
+    // Aplicar cupom se fornecido
+    let appliedCoupon = null;
+    if (coupon && coupon.code) {
+      const validation = validateCoupon(coupon.code);
+      if (validation.valid) {
+        appliedCoupon = validation.coupon;
+        // Incrementar uso do cupom
+        applyCoupon(coupon.code);
+      }
+    }
 
     const order = {
       id: orderId,
@@ -1527,6 +1639,7 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
             label: shipping.label || ''
           }
         : null,
+      coupon: appliedCoupon || null,
       total: Number(total) || 0,
       createdAt: new Date().toISOString()
     };

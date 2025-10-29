@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styles from './Checkout.module.css';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
+import CouponInput from './CouponInput';
 
 const initialForm = {
   name: '',
@@ -33,6 +34,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
   const [zipLookupLoading, setZipLookupLoading] = useState(false);
   const [zipLookupError, setZipLookupError] = useState('');
   const [zipLookupMessage, setZipLookupMessage] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const { user, token, loading: authLoading } = useAuth();
   const lastZipLookupRef = useRef('');
 
@@ -46,9 +48,27 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
     [items]
   );
 
+  const shippingCost = useMemo(() => {
+    if (!shippingQuote) return 0;
+    // Se o cupom oferece frete grátis, retorna 0
+    if (appliedCoupon?.freeShipping) return 0;
+    return shippingQuote.price || 0;
+  }, [shippingQuote, appliedCoupon]);
+
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.type === 'percentage') {
+      return itemsTotal * (appliedCoupon.discount / 100);
+    }
+    if (appliedCoupon.type === 'fixed') {
+      return Math.min(appliedCoupon.discount, itemsTotal);
+    }
+    return 0;
+  }, [appliedCoupon, itemsTotal]);
+
   const grandTotal = useMemo(
-    () => itemsTotal + (shippingQuote?.price || 0),
-    [itemsTotal, shippingQuote]
+    () => itemsTotal + shippingCost - discountAmount,
+    [itemsTotal, shippingCost, discountAmount]
   );
 
   const fetchOrders = useCallback(async () => {
@@ -311,6 +331,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
           },
           items,
           shipping: shippingQuote,
+          coupon: appliedCoupon,
           total: grandTotal
         })
       });
@@ -326,6 +347,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
       setAcceptedTerms(false);
       setShippingQuote(null);
       setShippingError('');
+      setAppliedCoupon(null);
       fetchOrders();
       onOrderComplete?.();
     } catch (err) {
@@ -375,11 +397,28 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
             )}
             {items.length > 0 && (
               <>
+                <CouponInput
+                  onCouponApplied={(coupon) => setAppliedCoupon(coupon)}
+                  onCouponRemoved={() => setAppliedCoupon(null)}
+                  disabled={submitting}
+                />
                 <div className={styles.totalRow}>
                   <span>Subtotal</span>
                   <strong>R$ {itemsTotal.toFixed(2)}</strong>
                 </div>
-                {shippingQuote ? (
+                {appliedCoupon && appliedCoupon.freeShipping && shippingQuote && (
+                  <div className={`${styles.totalRow} ${styles.discountRow}`}>
+                    <span>Frete (com cupom)</span>
+                    <strong className={styles.freeShipping}>GRÁTIS</strong>
+                  </div>
+                )}
+                {appliedCoupon && discountAmount > 0 && (
+                  <div className={`${styles.totalRow} ${styles.discountRow}`}>
+                    <span>Desconto ({appliedCoupon.code})</span>
+                    <strong className={styles.discount}>-R$ {discountAmount.toFixed(2)}</strong>
+                  </div>
+                )}
+                {shippingQuote && !appliedCoupon?.freeShipping ? (
                   <div className={`${styles.totalRow} ${styles.shippingRow}`}>
                     <span>
                       Frete
@@ -389,7 +428,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
                     </span>
                     <strong>{shippingQuote.formattedPrice}</strong>
                   </div>
-                ) : (
+                ) : !appliedCoupon?.freeShipping && (
                   <p className={styles.shippingReminder}>Calcule o frete informando o CEP.</p>
                 )}
                 <div className={`${styles.totalRow} ${styles.grandTotalRow}`}>

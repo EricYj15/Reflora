@@ -1,0 +1,16 @@
+{
+  "coupons": [
+    {
+      "code": "ANAL",
+      "type": "free_shipping",
+      "description": "Frete grátis",
+      "discount": 0,
+      "freeShipping": true,
+      "active": true,
+      "expiresAt": null,
+      "usageLimit": null,
+      "usageCount": 0,
+      "createdAt": "2025-10-29T00:00:00.000Z"
+    }
+  ]
+}
