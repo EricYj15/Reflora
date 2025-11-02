@@ -410,6 +410,125 @@ const ORDER_EMAIL_TEMPLATES = {
   }
 };
 
+const LOCK_INVENTORY_STATUSES = new Set(['paid', 'shipped', 'in_transit', 'delivered']);
+
+function lockInventoryForOrder(order) {
+  if (!order || order.inventoryLocked || !Array.isArray(order.items) || order.items.length === 0) {
+    return false;
+  }
+
+  const productsDb = readProducts();
+  if (!productsDb || !Array.isArray(productsDb.products) || productsDb.products.length === 0) {
+    return false;
+  }
+
+  let matchedAny = false;
+  let productsChanged = false;
+  const now = new Date().toISOString();
+
+  order.items.forEach((item) => {
+    if (!item) {
+      return;
+    }
+
+    const productIndex = productsDb.products.findIndex((product) => String(product.id) === String(item.id));
+    if (productIndex === -1) {
+      return;
+    }
+
+    matchedAny = true;
+
+    const product = productsDb.products[productIndex];
+    const currentStockRaw = Number(product.stock);
+    const currentStock = Number.isFinite(currentStockRaw) ? currentStockRaw : 0;
+    const quantity = Math.max(1, Number(item.quantity) || 1);
+
+    let newStock = currentStock;
+    if (product.isExclusive) {
+      newStock = 0;
+    } else {
+      newStock = Math.max(0, currentStock - quantity);
+    }
+
+    if (newStock !== currentStock) {
+      product.stock = newStock;
+      product.updatedAt = now;
+      productsChanged = true;
+    }
+  });
+
+  if (productsChanged) {
+    writeProducts(productsDb);
+  }
+
+  if (matchedAny) {
+    order.inventoryLocked = true;
+    order.inventoryLockedAt = now;
+    if (order.inventoryUnlockedAt) {
+      order.inventoryUnlockedAt = null;
+    }
+  }
+
+  return matchedAny;
+}
+
+function unlockInventoryForOrder(order) {
+  if (!order || !order.inventoryLocked || !Array.isArray(order.items) || order.items.length === 0) {
+    return false;
+  }
+
+  const productsDb = readProducts();
+  if (!productsDb || !Array.isArray(productsDb.products) || productsDb.products.length === 0) {
+    order.inventoryLocked = false;
+    order.inventoryUnlockedAt = new Date().toISOString();
+    return false;
+  }
+
+  let matchedAny = false;
+  let productsChanged = false;
+  const now = new Date().toISOString();
+
+  order.items.forEach((item) => {
+    if (!item) {
+      return;
+    }
+
+    const productIndex = productsDb.products.findIndex((product) => String(product.id) === String(item.id));
+    if (productIndex === -1) {
+      return;
+    }
+
+    matchedAny = true;
+
+    const product = productsDb.products[productIndex];
+    const currentStockRaw = Number(product.stock);
+    const currentStock = Number.isFinite(currentStockRaw) ? currentStockRaw : 0;
+    const quantity = Math.max(1, Number(item.quantity) || 1);
+
+    let newStock = currentStock;
+    if (product.isExclusive) {
+      newStock = Math.max(currentStock, quantity);
+    } else {
+      newStock = currentStock + quantity;
+    }
+
+    if (newStock !== currentStock) {
+      product.stock = newStock;
+      product.updatedAt = now;
+      productsChanged = true;
+    }
+  });
+
+  if (productsChanged) {
+    writeProducts(productsDb);
+  }
+
+  order.inventoryLocked = false;
+  order.inventoryUnlockedAt = now;
+
+  return matchedAny;
+}
+
 function buildOrderItemsHtml(order) {
   if (!Array.isArray(order?.items) || order.items.length === 0) {
     return '<p>Nenhum item identificado.</p>';
@@ -2017,6 +2136,9 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
       total: Number(total) || 0,
       createdAt: nowIso,
       updatedAt: nowIso,
+      inventoryLocked: false,
+      inventoryLockedAt: null,
+      inventoryUnlockedAt: null,
       statusHistory: [
         {
           status: 'pending_payment',
@@ -2100,6 +2222,10 @@ app.patch('/api/orders/:orderId/tracking', authenticateToken, (req, res) => {
       });
     }
     
+    if (LOCK_INVENTORY_STATUSES.has(order.status)) {
+      lockInventoryForOrder(order);
+    }
+
     writeDatabase(db);
 
     const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
@@ -2153,6 +2279,12 @@ app.patch('/api/orders/:orderId/status', authenticateToken, (req, res) => {
       description: description || `Status alterado para ${status}`
     });
     
+    if (status === 'cancelled') {
+      unlockInventoryForOrder(order);
+    } else if (LOCK_INVENTORY_STATUSES.has(status)) {
+      lockInventoryForOrder(order);
+    }
+
     writeDatabase(db);
 
     const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
@@ -2340,7 +2472,14 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
     }
 
     if (updated) {
+      if (order.status === 'cancelled') {
+        unlockInventoryForOrder(order);
+      } else if (LOCK_INVENTORY_STATUSES.has(order.status)) {
+        lockInventoryForOrder(order);
+      }
+
       writeDatabase(db);
+
       const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
         ? order.statusHistory[order.statusHistory.length - 1]
         : null;
