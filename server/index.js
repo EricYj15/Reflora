@@ -123,7 +123,7 @@ if (!fs.existsSync(couponsFile)) {
   const defaultCoupons = {
     coupons: [
       {
-        code: 'ANAL',
+        code: 'REFLORAGRATIS',
         type: 'free_shipping',
         description: 'Frete grátis',
         discount: 0,
