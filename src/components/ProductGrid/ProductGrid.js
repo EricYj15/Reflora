@@ -179,7 +179,11 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
                 <span className={styles.exclusiveTag}>Peça exclusiva</span>
               )}
               <p className={`${styles.stock} ${outOfStock ? styles.stockOut : ''}`}>
-                {outOfStock ? 'Esgotado no momento' : `Estoque: ${product.stock}`}
+                {outOfStock
+                  ? 'Esgotado no momento'
+                  : product.isExclusive
+                    ? 'Peça exclusiva'
+                    : `Estoque: ${product.stock}`}
               </p>
               <div className={styles.sizeRow} role="group" aria-label="Disponibilidade por tamanho">
                 {availableSizes.map((size) => (
