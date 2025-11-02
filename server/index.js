@@ -13,6 +13,10 @@ const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
+const fetch = globalThis.fetch
+  ? (...args) => globalThis.fetch(...args)
+  : (...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args));
+
 const app = express();
 const PORT = Number(process.env.PORT || process.env.SERVER_PORT || 4000);
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'reflorar123@gmail.com')
@@ -1089,6 +1093,7 @@ function buildShippingQuote({ cep, items = [] }) {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 
 app.post(
@@ -1906,102 +1911,135 @@ app.get('/api/tracking/:trackingCode', async (req, res) => {
 // Webhook do Mercado Pago para notificações de pagamento
 app.post('/api/webhooks/mercadopago', async (req, res) => {
   try {
-    console.log('📩 Webhook do Mercado Pago recebido:', JSON.stringify(req.body, null, 2));
+    const body = req.body || {};
+    const query = req.query || {};
+    const topic = String(body.type || body.topic || query.topic || query.type || '').toLowerCase();
+    const action = String(body.action || query.action || '').toLowerCase();
+    const paymentIdRaw = body?.data?.id ?? body?.id ?? query?.id ?? query?.['data.id'];
+    const paymentId = paymentIdRaw ? String(paymentIdRaw) : null;
 
-    const { type, data } = req.body;
+    console.log('📩 Webhook do Mercado Pago recebido:', {
+      topic,
+      action,
+      paymentId,
+      body,
+      query
+    });
 
-    // Mercado Pago envia diferentes tipos de notificações
-    // type: 'payment' = notificação de pagamento
-    if (type === 'payment' && data?.id) {
-      const paymentId = data.id;
-      
-      console.log(`🔍 Consultando pagamento ${paymentId} no Mercado Pago...`);
+    const isPaymentNotification =
+      topic === 'payment' ||
+      action.startsWith('payment') ||
+      String(query?.topic || '').toLowerCase() === 'payment';
 
-      // Consultar detalhes do pagamento na API do Mercado Pago
-      const accessToken = process.env.MP_ACCESS_TOKEN;
-      
-      if (!accessToken) {
-        console.error('❌ MP_ACCESS_TOKEN não configurado');
-        return res.status(200).json({ success: false, message: 'Token não configurado' });
+    if (!isPaymentNotification || !paymentId) {
+      console.log('ℹ️ Notificação ignorada - não é de pagamento ou sem paymentId.');
+      return res.status(200).json({ success: true, ignored: true });
+    }
+
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+
+    if (!accessToken) {
+      console.error('❌ MP_ACCESS_TOKEN não configurado');
+      return res.status(200).json({ success: false, message: 'Token não configurado' });
+    }
+
+    let payment;
+    try {
+      const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Erro ao consultar pagamento: ${response.status} - ${errorText}`);
+        return res.status(200).json({ success: false, message: 'Erro ao consultar pagamento' });
       }
 
-      try {
-        const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
+      payment = await response.json();
+    } catch (error) {
+      console.error('❌ Erro ao processar pagamento:', error);
+      return res.status(200).json({ success: false, message: 'Erro ao processar pagamento' });
+    }
 
-        if (!response.ok) {
-          console.error(`❌ Erro ao consultar pagamento: ${response.status}`);
-          return res.status(200).json({ success: false, message: 'Erro ao consultar pagamento' });
-        }
+    console.log('💳 Detalhes do pagamento:', {
+      id: payment.id,
+      status: payment.status,
+      status_detail: payment.status_detail,
+      external_reference: payment.external_reference,
+      transaction_amount: payment.transaction_amount
+    });
 
-        const payment = await response.json();
-        console.log('💳 Detalhes do pagamento:', {
-          id: payment.id,
-          status: payment.status,
-          status_detail: payment.status_detail,
-          external_reference: payment.external_reference,
-          transaction_amount: payment.transaction_amount
-        });
+    const orderId = payment.external_reference ? String(payment.external_reference) : null;
 
-        // Verificar se o pagamento foi aprovado
-        if (payment.status === 'approved' && payment.external_reference) {
-          const orderId = payment.external_reference;
-          
-          console.log(`✅ Pagamento aprovado para pedido ${orderId}`);
+    if (!orderId) {
+      console.error('❌ Não foi possível determinar o pedido a partir do external_reference.');
+      return res.status(200).json({ success: false, message: 'Pedido não encontrado' });
+    }
 
-          // Atualizar status do pedido no banco de dados
-          const db = readDatabase();
-          const order = db.orders.find(o => o.id === orderId);
+    const db = readDatabase();
+    const order = db.orders.find((o) => String(o.id) === orderId);
 
-          if (!order) {
-            console.error(`❌ Pedido ${orderId} não encontrado`);
-            return res.status(200).json({ success: false, message: 'Pedido não encontrado' });
-          }
+    if (!order) {
+      console.error(`❌ Pedido ${orderId} não encontrado`);
+      return res.status(200).json({ success: false, message: 'Pedido não encontrado' });
+    }
 
-          // Só atualiza se estiver aguardando pagamento
-          if (order.status === 'pending_payment') {
-            order.status = 'paid';
-            order.updatedAt = new Date().toISOString();
-            order.paidAt = new Date().toISOString();
-            order.paymentId = payment.id;
-            
-            if (!order.statusHistory) {
-              order.statusHistory = [];
-            }
-            
-            order.statusHistory.push({
-              status: 'paid',
-              timestamp: new Date().toISOString(),
-              description: `Pagamento confirmado pelo Mercado Pago (ID: ${payment.id})`
-            });
+    const now = new Date().toISOString();
+    let updated = false;
 
-            writeDatabase(db);
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
 
-            console.log(`🎉 Pedido ${orderId} atualizado para 'paid'`);
-            
-            // Aqui você pode adicionar lógica adicional:
-            // - Enviar email de confirmação
-            // - Notificar o admin
-            // - Integrar com sistema de estoque
-          } else {
-            console.log(`⚠️ Pedido ${orderId} já está no status: ${order.status}`);
-          }
-        } else {
-          console.log(`⏳ Pagamento ${paymentId} não está aprovado ainda: ${payment.status}`);
-        }
+    const pushHistory = (status, description) => {
+      order.statusHistory.push({
+        status,
+        timestamp: now,
+        description
+      });
+    };
 
-      } catch (error) {
-        console.error('❌ Erro ao processar pagamento:', error);
-        return res.status(200).json({ success: false, message: 'Erro ao processar pagamento' });
+    if (payment.status === 'approved') {
+      if (order.status !== 'paid') {
+        order.status = 'paid';
+        order.updatedAt = now;
+        order.paidAt = now;
+        order.paymentId = payment.id;
+        pushHistory('paid', `Pagamento confirmado pelo Mercado Pago (ID: ${payment.id})`);
+        updated = true;
+        console.log(`🎉 Pedido ${orderId} atualizado para 'paid'`);
+      } else {
+        console.log(`⚠️ Pedido ${orderId} já estava com status 'paid'.`);
       }
+    } else if (['cancelled', 'rejected', 'charged_back'].includes(payment.status)) {
+      if (order.status !== 'cancelled') {
+        order.status = 'cancelled';
+        order.updatedAt = now;
+        pushHistory('cancelled', `Pagamento ${payment.status} pelo Mercado Pago (ID: ${payment.id})`);
+        updated = true;
+        console.log(`⚠️ Pedido ${orderId} marcado como cancelado (${payment.status}).`);
+      }
+    } else if (['pending', 'in_process', 'in_mediation'].includes(payment.status)) {
+      if (order.status !== 'pending_payment') {
+        order.status = 'pending_payment';
+        order.updatedAt = now;
+        pushHistory('pending_payment', `Pagamento em processamento (${payment.status}).`);
+        updated = true;
+        console.log(`ℹ️ Pedido ${orderId} atualizado para 'pending_payment' (${payment.status}).`);
+      }
+    } else {
+      console.log(`ℹ️ Status ${payment.status} recebido, nenhuma alteração aplicada.`);
+    }
+
+    if (updated) {
+      writeDatabase(db);
     }
 
     // Sempre retornar 200 para o Mercado Pago não reenviar
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, updated });
   } catch (error) {
     console.error('❌ Erro no webhook do Mercado Pago:', error);
     res.status(200).json({ success: false, message: error.message });
