@@ -173,19 +173,13 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
               </div>
             </div>
             <div className={styles.info}>
-              <div className={styles.nameRow}>
-                <h3 className={styles.productName}>{product.name}</h3>
-                {product.isExclusive && (
-                  <span className={styles.exclusiveTag}>Peça exclusiva</span>
-                )}
-              </div>
+              <h3 className={styles.productName}>{product.name}</h3>
               <p className={styles.price}>{product.price}</p>
+              {product.isExclusive && (
+                <span className={styles.exclusiveTag}>Peça exclusiva</span>
+              )}
               <p className={`${styles.stock} ${outOfStock ? styles.stockOut : ''}`}>
-                {outOfStock
-                  ? 'Esgotado no momento'
-                  : product.isExclusive
-                    ? 'Peça exclusiva (estoque unitário)'
-                    : `Estoque: ${product.stock}`}
+                {outOfStock ? 'Esgotado no momento' : `Estoque: ${product.stock}`}
               </p>
               <div className={styles.sizeRow} role="group" aria-label="Disponibilidade por tamanho">
                 {availableSizes.map((size) => (

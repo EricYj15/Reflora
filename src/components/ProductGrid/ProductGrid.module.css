@@ -140,20 +140,12 @@
   text-align: center;
 }
 
-.nameRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.25rem;
-}
 
 .productName {
   font-family: 'Lora', serif;
   font-size: 1.2rem;
   color: var(--ink);
-  margin: 0;
+  margin: 0 0 0.25rem 0;
   font-weight: 600;
   transition: color 0.3s ease;
 }
@@ -173,6 +165,7 @@
   background: rgba(95, 138, 139, 0.18);
   color: var(--primary);
   border: 1px solid rgba(95, 138, 139, 0.35);
+  margin: 0.35rem auto 0;
 }
 
 .price {
