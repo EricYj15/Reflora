@@ -14,7 +14,7 @@ const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
-const PORT = Number(process.env.SERVER_PORT || process.env.PORT || 4000);
+const PORT = Number(process.env.PORT || process.env.SERVER_PORT || 4000);
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'reflorar123@gmail.com')
   .split(',')
   .map((email) => email.trim().toLowerCase())
