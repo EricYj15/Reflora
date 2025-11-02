@@ -128,7 +128,7 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
 
   return (
     <section id="products" className={styles.section}>
-      <h2 className={styles.title}>Flores do Jardim Noturno</h2>
+  <h2 className={styles.title}>Peças</h2>
       <div className={styles.grid}>
         {catalog.map((product, index) => {
           if (!product) {

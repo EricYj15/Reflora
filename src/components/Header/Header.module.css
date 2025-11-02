@@ -77,6 +77,15 @@
   font-size: 1.5rem;
   letter-spacing: 0.1em;
   font-weight: 700;
+  transition: color 0.25s ease;
+}
+
+.brandMobileHidden {
+  color: transparent;
+}
+
+.brandMobileVisible {
+  color: var(--wine);
 }
 
 .brand:focus-visible {
@@ -356,6 +365,8 @@
 
   .brandMobile {
     display: block;
+    min-width: 5rem;
+    text-align: center;
   }
 
   .nav {

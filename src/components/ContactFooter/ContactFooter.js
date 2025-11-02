@@ -21,7 +21,7 @@ const ContactFooter = () => {
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Floresça Conosco</h3>
             <p className={styles.sectionDescription}>
-              Receba em primeira mão sobre novas peças e histórias do jardim noturno.
+              Receba em primeira mão sobre novas peças e histórias da Reflora.
             </p>
             
             <form 

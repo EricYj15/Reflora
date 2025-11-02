@@ -19,6 +19,8 @@ const Header = ({
 }) => {
   const { user, logout, loading, isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [showMobileBrand, setShowMobileBrand] = useState(false);
 
   const firstName = useMemo(() => {
     if (!user?.name) {
@@ -46,6 +48,47 @@ const Header = ({
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const handleMediaChange = (event) => {
+      setIsMobileView(event.matches);
+    };
+
+    handleMediaChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleMediaChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleMediaChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileView) {
+      setShowMobileBrand(false);
+      return undefined;
+    }
+
+    const productsSection = document.getElementById('products');
+    if (!productsSection) {
+      setShowMobileBrand(true);
+      return undefined;
+    }
+
+    const updateBrandVisibility = () => {
+      const triggerPosition = Math.max(productsSection.offsetTop - 120, 0);
+      setShowMobileBrand(window.scrollY >= triggerPosition);
+    };
+
+    updateBrandVisibility();
+    window.addEventListener('scroll', updateBrandVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', updateBrandVisibility);
+    };
+  }, [isMobileView]);
+
+  const mobileBrandClass = showMobileBrand ? styles.brandMobileVisible : styles.brandMobileHidden;
+
   return (
     <>
       {/* Overlay escuro quando menu está aberto */}
@@ -72,7 +115,7 @@ const Header = ({
         </div>
         
         <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateProducts)}>Peças</button>
-        <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateManifesto)}>Manifesto</button>
+  <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateManifesto)}>Nos Conheça</button>
         <button type="button" className={styles.link} onClick={() => handleNavigate(onOpenPolicy)}>Garantia</button>
         <button type="button" className={styles.link} onClick={() => handleNavigate(onNavigateContact)}>Contato</button>
         {user && (
@@ -129,13 +172,13 @@ const Header = ({
 
           <button type="button" className={styles.brand} aria-label="Reflora Home" onClick={onNavigateHome}>
             <span className={styles.brandText}>Reflora</span>
-            <span className={styles.brandMobile}>Re.</span>
+            <span className={`${styles.brandMobile} ${mobileBrandClass}`}>Reflora</span>
           </button>
 
           {/* Nav para desktop - dentro do header */}
           <nav className={styles.navDesktop} aria-label="Navegação principal">
             <button type="button" className={styles.link} onClick={onNavigateProducts}>Peças</button>
-            <button type="button" className={styles.link} onClick={onNavigateManifesto}>Manifesto</button>
+            <button type="button" className={styles.link} onClick={onNavigateManifesto}>Nos Conheça</button>
             <button type="button" className={styles.link} onClick={onOpenPolicy}>Garantia</button>
             <button type="button" className={styles.link} onClick={onNavigateContact}>Contato</button>
             {user && (

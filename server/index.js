@@ -47,7 +47,7 @@ const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || '';
+const SMTP_FROM = process.env.SMTP_FROM || process.env.MAIL_FROM || '';
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
 
 const storage = multer.diskStorage({
@@ -315,6 +315,296 @@ async function sendPasswordResetEmail(recipient, code) {
     console.error('Erro ao enviar e-mail de redefinição de senha:', error);
     return false;
   }
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatCepHuman(value = '') {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 8) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+  return value || '';
+}
+
+function buildOrderAddressLines(address = {}) {
+  if (!address || typeof address !== 'object') {
+    return [];
+  }
+
+  const { street, number, complement, district, city, state, zip } = address;
+  const lines = [];
+
+  const baseLine = [street, number].filter(Boolean).join(', ');
+  if (baseLine) {
+    lines.push(baseLine);
+  }
+
+  if (complement) {
+    lines.push(complement);
+  }
+
+  if (district) {
+    lines.push(district);
+  }
+
+  const cityState = [city, state].filter(Boolean).join(' - ');
+  if (cityState) {
+    lines.push(cityState);
+  }
+
+  const formattedCep = formatCepHuman(zip);
+  if (formattedCep) {
+    lines.push(`CEP ${formattedCep}`);
+  }
+
+  return lines;
+}
+
+const ORDER_STATUS_LABELS = {
+  pending_payment: 'Aguardando pagamento',
+  paid: 'Pagamento aprovado',
+  shipped: 'Pedido enviado',
+  in_transit: 'Pedido em trânsito',
+  delivered: 'Pedido entregue',
+  cancelled: 'Pedido cancelado'
+};
+
+const ORDER_EMAIL_TEMPLATES = {
+  pending_payment: {
+    subject: (order) => `Recebemos o pedido ${order.id}`,
+    intro: () => 'Seu pedido foi registrado e estamos aguardando a confirmação do pagamento.'
+  },
+  paid: {
+    subject: (order) => `Pagamento confirmado • Pedido ${order.id}`,
+    intro: () => 'Pagamento aprovado! Estamos preparando sua peça para envio.'
+  },
+  shipped: {
+    subject: (order) => `Pedido ${order.id} enviado`,
+    intro: (order) => order.trackingCode
+      ? `Seu pedido saiu para envio. Código de rastreio: ${order.trackingCode}.`
+      : 'Seu pedido saiu para envio.'
+  },
+  in_transit: {
+    subject: (order) => `Pedido ${order.id} está a caminho`,
+    intro: () => 'O pedido está em trânsito até o seu endereço.'
+  },
+  delivered: {
+    subject: (order) => `Pedido ${order.id} entregue`,
+    intro: () => 'Esperamos que você ame a sua peça! Qualquer dúvida, estamos por aqui.'
+  },
+  cancelled: {
+    subject: (order) => `Pedido ${order.id} cancelado`,
+    intro: () => 'O pedido foi cancelado. Se precisar de suporte, conte conosco.'
+  },
+  generic: {
+    subject: (order, statusLabel) => `Atualização do pedido ${order.id}`,
+    intro: (_order, statusLabel) => `Status atualizado: ${statusLabel}.`
+  }
+};
+
+function buildOrderItemsHtml(order) {
+  if (!Array.isArray(order?.items) || order.items.length === 0) {
+    return '<p>Nenhum item identificado.</p>';
+  }
+
+  const rows = order.items.map((item) => {
+    const quantity = Number(item.quantity) || 1;
+    const unitPrice = formatCurrencyBRL(Number(item.priceValue) || 0);
+    const subtotal = formatCurrencyBRL((Number(item.priceValue) || 0) * quantity);
+    return `
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #ececec;">
+          <strong>${escapeHtml(item.name)}</strong><br />
+          <small>${quantity}× ${unitPrice} — ${subtotal}</small>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function buildOrderTotalsHtml(order) {
+  const segments = [];
+
+  if (order?.shipping?.price) {
+    segments.push({
+      label: 'Frete',
+      value: formatCurrencyBRL(Number(order.shipping.price) || 0)
+    });
+  }
+
+  if (order?.coupon?.code) {
+    const couponLabel = order.coupon.description
+      ? `${order.coupon.code} — ${order.coupon.description}`
+      : order.coupon.code;
+    segments.push({
+      label: `Cupom (${escapeHtml(couponLabel)})`,
+      value: 'Aplicado'
+    });
+  }
+
+  segments.push({
+    label: 'Total',
+    value: formatCurrencyBRL(Number(order?.total) || 0),
+    highlight: true
+  });
+
+  const rows = segments.map((segment) => `
+    <tr>
+      <td style="padding: 6px 0; color: #555; font-size: 0.95rem;">
+        ${segment.label}
+      </td>
+      <td style="padding: 6px 0; text-align: right; font-weight: ${segment.highlight ? '600' : '500'}; color: ${segment.highlight ? '#7b0f12' : '#333'};">
+        ${segment.value}
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+    <table style="width: 100%; margin-top: 12px;">
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function buildOrderEmailHtml(order, { statusLabel, intro, note }) {
+  const customerName = order?.customer?.name ? escapeHtml(order.customer.name.split(' ')[0]) : 'Olá';
+  const addressLines = buildOrderAddressLines(order?.address);
+  const addressHtml = addressLines.length
+    ? `<div style="margin-top: 12px; font-size: 0.95rem; color: #4a4a4a;">
+        <strong>Entrega:</strong><br />
+        ${addressLines.map((line) => escapeHtml(line)).join('<br />')}
+      </div>`
+    : '';
+
+  const contactLine = order?.customer?.phone
+    ? `<p style="margin: 16px 0 0; font-size: 0.95rem; color: #4a4a4a;">Telefone: ${escapeHtml(order.customer.phone)}</p>`
+    : '';
+
+  return `
+    <div style="font-family: 'Segoe UI', Roboto, sans-serif; color: #1f1f1f; line-height: 1.55;">
+      <p style="margin-top: 0;">${customerName},</p>
+      <p>${escapeHtml(intro)}</p>
+      ${note ? `<p style="margin-top: 12px; color: #5b5b5b;">${escapeHtml(note)}</p>` : ''}
+      <div style="margin: 20px 0; padding: 16px; border: 1px solid #f0d9d9; border-radius: 12px; background: #fff7f7;">
+        <h2 style="margin: 0 0 8px; font-size: 1.15rem; color: #7b0f12;">Pedido ${escapeHtml(order.id)} • ${escapeHtml(statusLabel)}</h2>
+        ${buildOrderItemsHtml(order)}
+        ${buildOrderTotalsHtml(order)}
+        ${addressHtml}
+      </div>
+      ${contactLine}
+      <p style="margin-top: 24px; font-size: 0.95rem; color: #555;">Qualquer dúvida, responda este e-mail ou fale conosco pelo WhatsApp.</p>
+      <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
+    </div>
+  `;
+}
+
+function buildOrderEmailText(order, { statusLabel, intro, note }) {
+  const lines = [];
+  lines.push(`Pedido ${order?.id || ''} • ${statusLabel}`);
+  lines.push('');
+  lines.push(intro);
+  if (note) {
+    lines.push(note);
+  }
+  lines.push('');
+  if (Array.isArray(order?.items) && order.items.length) {
+    lines.push('Itens:');
+    order.items.forEach((item) => {
+      const quantity = Number(item.quantity) || 1;
+      const unitPrice = formatCurrencyBRL(Number(item.priceValue) || 0);
+      const subtotal = formatCurrencyBRL((Number(item.priceValue) || 0) * quantity);
+      lines.push(`- ${quantity}× ${item.name} (${unitPrice}) — ${subtotal}`);
+    });
+    lines.push('');
+  }
+
+  if (order?.shipping?.price) {
+    lines.push(`Frete: ${formatCurrencyBRL(Number(order.shipping.price) || 0)}`);
+  }
+
+  lines.push(`Total: ${formatCurrencyBRL(Number(order?.total) || 0)}`);
+
+  const addressLines = buildOrderAddressLines(order?.address);
+  if (addressLines.length) {
+    lines.push('');
+    lines.push('Entrega:');
+    addressLines.forEach((line) => lines.push(line));
+  }
+
+  if (order?.customer?.phone) {
+    lines.push('');
+    lines.push(`Telefone: ${order.customer.phone}`);
+  }
+
+  lines.push('');
+  lines.push('Equipe Reflora');
+  return lines.join('\n');
+}
+
+async function sendOrderStatusEmail(order, status, description = '') {
+  if (!order?.customer?.email) {
+    return false;
+  }
+
+  if (!isEmailTransportConfigured()) {
+    console.info(`[Order Email] ${status} para ${order.customer.email} não enviado (SMTP não configurado).`);
+    return false;
+  }
+
+  try {
+    const transporter = getMailTransporter();
+    if (!transporter) {
+      return false;
+    }
+
+    const statusLabel = ORDER_STATUS_LABELS[status] || status;
+    const template = ORDER_EMAIL_TEMPLATES[status] || ORDER_EMAIL_TEMPLATES.generic;
+    const subjectFactory = template.subject || ORDER_EMAIL_TEMPLATES.generic.subject;
+    const introFactory = template.intro || ORDER_EMAIL_TEMPLATES.generic.intro;
+
+    const intro = introFactory(order, statusLabel);
+    const note = description && description !== intro ? description : '';
+
+    const html = buildOrderEmailHtml(order, { statusLabel, intro, note });
+    const text = buildOrderEmailText(order, { statusLabel, intro, note });
+
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to: order.customer.email,
+      subject: subjectFactory(order, statusLabel),
+      text,
+      html
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Erro ao enviar e-mail para status ${status} do pedido ${order?.id}:`, error);
+    return false;
+  }
+}
+
+function notifyOrderStatusByEmail(order, status, description = '') {
+  if (!order || !status) {
+    return;
+  }
+
+  sendOrderStatusEmail(order, status, description).catch((error) => {
+    console.error('Erro inesperado ao disparar e-mail de status:', error);
+  });
 }
 
 function generateResetCode() {
@@ -1685,6 +1975,9 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
       }
     }
 
+    const nowIso = new Date().toISOString();
+    const createdDescription = 'Pedido criado, aguardando pagamento';
+
     const order = {
       id: orderId,
       userId: req.userId || null,
@@ -1722,13 +2015,13 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
         : null,
       coupon: appliedCoupon || null,
       total: Number(total) || 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
       statusHistory: [
         {
           status: 'pending_payment',
-          timestamp: new Date().toISOString(),
-          description: 'Pedido criado, aguardando pagamento'
+          timestamp: nowIso,
+          description: createdDescription
         }
       ]
     };
@@ -1736,6 +2029,8 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
     const db = readDatabase();
     db.orders.unshift(order);
     writeDatabase(db);
+
+    notifyOrderStatusByEmail(order, 'pending_payment', createdDescription);
 
     console.log('Pedido criado:', {
       id: order.id,
@@ -1807,6 +2102,11 @@ app.patch('/api/orders/:orderId/tracking', authenticateToken, (req, res) => {
     
     writeDatabase(db);
 
+    const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
+      ? order.statusHistory[order.statusHistory.length - 1]
+      : null;
+    notifyOrderStatusByEmail(order, latestEntry?.status || order.status, latestEntry?.description || '');
+
     res.json({ success: false, order });
   } catch (error) {
     console.error('Erro ao adicionar código de rastreamento:', error);
@@ -1854,6 +2154,11 @@ app.patch('/api/orders/:orderId/status', authenticateToken, (req, res) => {
     });
     
     writeDatabase(db);
+
+    const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
+      ? order.statusHistory[order.statusHistory.length - 1]
+      : null;
+    notifyOrderStatusByEmail(order, latestEntry?.status || status, latestEntry?.description || description || '');
 
     res.json({ success: true, order });
   } catch (error) {
@@ -2036,6 +2341,10 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
 
     if (updated) {
       writeDatabase(db);
+      const latestEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
+        ? order.statusHistory[order.statusHistory.length - 1]
+        : null;
+      notifyOrderStatusByEmail(order, latestEntry?.status || order.status, latestEntry?.description || '');
     }
 
     // Sempre retornar 200 para o Mercado Pago não reenviar
