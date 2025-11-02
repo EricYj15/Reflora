@@ -535,6 +535,29 @@
   gap: 1.25rem;
 }
 
+.addressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: rgba(24, 32, 32, 0.7);
+}
+
+.addressLine {
+  line-height: 1.4;
+}
+
+.addressPlaceholder {
+  font-style: italic;
+  color: rgba(24, 32, 32, 0.5);
+}
+
+.contactLine {
+  margin-top: 0.15rem;
+  font-weight: 600;
+  color: rgba(24, 32, 32, 0.85);
+}
+
 .catalogCard {
   background: rgba(255, 255, 255, 0.84);
   border-radius: 18px;

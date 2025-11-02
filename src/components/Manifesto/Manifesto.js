@@ -37,30 +37,20 @@ const Manifesto = () => {
       className={`${styles.section} ${isVisible ? styles.visible : ''}`}
     >
       <div className={styles.content}>
-        <h2 className={styles.title}>Nosso Manifesto</h2>
+        <h2 className={styles.title}>Nos Conheça</h2>
 
         <div className={styles.text}>
           <p>
-            Não somos uma fábrica; somos um pequeno jardim de costuras conduzido à mão.
-            Cada lote nasce aos poucos, entre conversas, café e linhas reutilizadas.
+            A <strong>Reflora</strong> é uma marca autoral de upcycling feita com muito carinho.
+            Cada peça é pensada de forma individual, respeitando o que cada tecido tem de especial.
           </p>
           <p>
-            Recolhemos tecidos rejeitados, mapeamos suas cicatrizes e decidimos quais
-            histórias eles ainda carregam. Depois, transformamos em peças que respeitam a
-            origem de cada fibra, sem esconder marcas do tempo.
+            Acreditamos que roupa também é forma de expressão. Por isso, transformamos
+            materiais já existentes em peças únicas, cheias de personalidade e história.
           </p>
           <p>
-            <strong>Reflora</strong> acredita que autenticidade floresce da transparência:
-            você sabe de onde veio, quem fez e quantas horas dedicamos à sua peça.
-            Não há estoques infinitos nem coleções apressadas; há cuidado e intenção.
-          </p>
-          <p>
-            Quando você veste Reflora, escolhe ampliar a vida útil de um material, apoiar
-            artesãos locais e vestir uma estética que não se repete. É moda que convida à
-            presença, não ao descarte.
-          </p>
-          <p className={styles.signature}>
-            Obrigada por cultivar esse jardim junto com a gente.
+            Aqui, tudo é feito com calma, cuidado e propósito. A Reflora é sobre dar um novo ciclo
+            às roupas e colocar arte em cada detalhe.
           </p>
         </div>
       </div>

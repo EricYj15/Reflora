@@ -41,6 +41,45 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value));
 };
 
+const formatCep = (value = '') => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 8) {
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+  return value || '';
+};
+
+const buildAddressLines = (address = {}) => {
+  if (!address || typeof address !== 'object') {
+    return [];
+  }
+
+  const { street, number, complement, district, city, state, zip } = address;
+  const lines = [];
+
+  const baseLine = [street, number].filter(Boolean).join(', ');
+  if (baseLine) {
+    lines.push(complement ? `${baseLine} - ${complement}` : baseLine);
+  } else if (complement) {
+    lines.push(complement);
+  }
+
+  if (district) {
+    lines.push(district);
+  }
+
+  const cityState = [city, state].filter(Boolean).join(' - ');
+  if (cityState) {
+    lines.push(cityState);
+  }
+
+  if (zip) {
+    lines.push(`CEP: ${formatCep(zip)}`);
+  }
+
+  return lines;
+};
+
 const AdminDashboard = () => {
   const { token, user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
@@ -510,6 +549,7 @@ const AdminDashboard = () => {
                     <th>ID</th>
                     <th>Data</th>
                     <th>Cliente</th>
+                    <th>Entrega e contato</th>
                     <th>Total</th>
                     <th>Itens</th>
                     <th>Pagamento</th>
@@ -517,14 +557,31 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map((order) => (
-                    <tr key={order.id}>
+                  {orders.map((order) => {
+                    const addressLines = buildAddressLines(order.address);
+                    return (
+                      <tr key={order.id}>
                       <td><code>{order.id}</code></td>
                       <td>{new Date(order.createdAt).toLocaleString('pt-BR')}</td>
                       <td>
                         <strong>{order.customer?.name}</strong>
                         <br />
                         <small>{order.customer?.email}</small>
+                      </td>
+                      <td>
+                        <div className={styles.addressBlock}>
+                          {addressLines.map((line, index) => (
+                            <span key={`${order.id}-addr-${index}`} className={styles.addressLine}>
+                              {line}
+                            </span>
+                          ))}
+                          {addressLines.length === 0 && (
+                            <span className={styles.addressPlaceholder}>Endereço não informado</span>
+                          )}
+                          {order.customer?.phone && (
+                            <span className={styles.contactLine}>Telefone: {order.customer.phone}</span>
+                          )}
+                        </div>
                       </td>
                       <td>{formatCurrency(order.total)}</td>
                       <td>
@@ -561,8 +618,9 @@ const AdminDashboard = () => {
                           </button>
                         )}
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
