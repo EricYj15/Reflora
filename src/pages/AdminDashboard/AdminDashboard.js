@@ -80,6 +80,17 @@ const buildAddressLines = (address = {}) => {
   return lines;
 };
 
+const STATUS_BADGES = {
+  pending_payment: { label: 'Aguardando pagamento', className: 'statusPending' },
+  paid: { label: 'Pagamento confirmado', className: 'statusPaid' },
+  shipped: { label: 'Pedido enviado', className: 'statusShipped' },
+  in_transit: { label: 'Em trânsito', className: 'statusTransit' },
+  delivered: { label: 'Pedido entregue', className: 'statusDelivered' },
+  cancelled: { label: 'Cancelado', className: 'statusCancelled' }
+};
+
+const CANCEL_NOTE_DEFAULT = 'Pedido cancelado e reembolso realizado.';
+
 const AdminDashboard = () => {
   const { token, user, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
@@ -93,6 +104,7 @@ const AdminDashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
+  const [statusUpdating, setStatusUpdating] = useState({});
 
   const authHeaders = useMemo(() => (
     token
@@ -204,6 +216,46 @@ const AdminDashboard = () => {
       showError(err.message || 'Erro ao adicionar código de rastreamento.');
     }
   }, [showError, showSuccess, fetchOrders]);
+
+  const handleCancelOrder = useCallback(async (order) => {
+    if (!order || order.status === 'cancelled') {
+      return;
+    }
+
+    const confirmCancel = window.confirm(`Cancelar o pedido ${order.id}? O cliente será notificado e o estoque retornará.`);
+    if (!confirmCancel) {
+      return;
+    }
+
+    const noteInput = window.prompt('Escreva uma nota para o cliente (opcional):', CANCEL_NOTE_DEFAULT);
+    const note = noteInput && noteInput.trim() ? noteInput.trim() : CANCEL_NOTE_DEFAULT;
+
+    try {
+      setStatusUpdating((prev) => ({ ...prev, [order.id]: true }));
+      const response = await apiFetch(`/api/orders/${order.id}/status`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ status: 'cancelled', description: note })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Não foi possível cancelar o pedido.');
+      }
+
+      showSuccess('Pedido cancelado e estoque atualizado. Cliente receberá a notificação.');
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+      showError(err.message || 'Erro ao cancelar pedido.');
+    } finally {
+      setStatusUpdating((prev) => {
+        const next = { ...prev };
+        delete next[order.id];
+        return next;
+      });
+    }
+  }, [authHeaders, fetchOrders, showError, showSuccess]);
 
   useEffect(() => {
     fetchOrders();
@@ -552,13 +604,26 @@ const AdminDashboard = () => {
                     <th>Entrega e contato</th>
                     <th>Total</th>
                     <th>Itens</th>
+                    <th>Status</th>
                     <th>Pagamento</th>
                     <th>Rastreamento</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => {
                     const addressLines = buildAddressLines(order.address);
+                    const statusInfo = STATUS_BADGES[order.status] || { label: order.status || 'Status desconhecido', className: 'statusDefault' };
+                    const statusClass = styles[statusInfo.className] || styles.statusDefault;
+                    const statusInProgress = Boolean(statusUpdating[order.id]);
+                    const latestStatusEntry = Array.isArray(order.statusHistory) && order.statusHistory.length
+                      ? order.statusHistory[order.statusHistory.length - 1]
+                      : null;
+                    const lastUpdateRaw = latestStatusEntry?.timestamp || order.updatedAt || order.createdAt;
+                    const lastUpdateDate = lastUpdateRaw ? new Date(lastUpdateRaw) : null;
+                    const lastUpdateText = lastUpdateDate && !Number.isNaN(lastUpdateDate.getTime())
+                      ? lastUpdateDate.toLocaleString('pt-BR')
+                      : 'Sem registro';
                     return (
                       <tr key={order.id}>
                       <td><code>{order.id}</code></td>
@@ -600,6 +665,21 @@ const AdminDashboard = () => {
                         </ul>
                       </td>
                       <td>
+                        <div className={styles.statusCell}>
+                          <span className={`${styles.statusBadge} ${statusClass}`}>
+                            {statusInfo.label}
+                          </span>
+                          <div className={styles.statusMeta}>
+                            <span>
+                              Atualizado em {lastUpdateText}
+                            </span>
+                            {order.inventoryLocked && order.status !== 'cancelled' && (
+                              <span className={styles.statusMetaLine}>Estoque reservado</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
                         {order.pix?.available && <span className={styles.badge}>PIX</span>}
                         {order.mercadoPago?.available && <span className={styles.badge}>MP</span>}
                       </td>
@@ -617,6 +697,18 @@ const AdminDashboard = () => {
                             + Adicionar
                           </button>
                         )}
+                      </td>
+                      <td>
+                        <div className={styles.rowActions}>
+                          <button
+                            type="button"
+                            className={styles.dangerButton}
+                            onClick={() => handleCancelOrder(order)}
+                            disabled={order.status === 'cancelled' || statusInProgress}
+                          >
+                            {statusInProgress ? 'Cancelando…' : order.status === 'cancelled' ? 'Cancelado' : 'Cancelar pedido'}
+                          </button>
+                        </div>
                       </td>
                       </tr>
                     );

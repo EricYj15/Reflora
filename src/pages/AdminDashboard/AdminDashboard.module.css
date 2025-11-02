@@ -187,6 +187,106 @@
   letter-spacing: 0.12em;
 }
 
+.statusCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  background: rgba(95, 138, 139, 0.12);
+  color: rgba(24, 32, 32, 0.85);
+  width: fit-content;
+}
+
+.statusDefault {
+  background: rgba(95, 138, 139, 0.15);
+  color: rgba(24, 32, 32, 0.75);
+}
+
+.statusPending {
+  background: rgba(255, 196, 81, 0.18);
+  color: #a36a00;
+}
+
+.statusPaid {
+  background: rgba(77, 158, 114, 0.18);
+  color: #2d6b3f;
+}
+
+.statusShipped {
+  background: rgba(80, 148, 180, 0.18);
+  color: #226783;
+}
+
+.statusTransit {
+  background: rgba(95, 138, 139, 0.18);
+  color: #325054;
+}
+
+.statusDelivered {
+  background: rgba(78, 178, 125, 0.18);
+  color: #2f6d45;
+}
+
+.statusCancelled {
+  background: rgba(182, 75, 75, 0.18);
+  color: #7b1013;
+}
+
+.statusMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: rgba(24, 32, 32, 0.6);
+}
+
+.statusMetaLine {
+  font-style: italic;
+  color: rgba(123, 15, 18, 0.7);
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dangerButton {
+  border: none;
+  background: rgba(123, 15, 18, 0.1);
+  color: #7b0f12;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  min-width: 140px;
+}
+
+.dangerButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(123, 15, 18, 0.18);
+  box-shadow: 0 8px 20px rgba(123, 15, 18, 0.16);
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* Tracking Cell */
 .trackingCell {
   display: flex;
