@@ -182,7 +182,7 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
                 {outOfStock
                   ? 'Esgotado no momento'
                   : product.isExclusive
-                    ? 'Peça exclusiva'
+                    ? 'Estoque único (1 unidade)'
                     : `Estoque: ${product.stock}`}
               </p>
               <div className={styles.sizeRow} role="group" aria-label="Disponibilidade por tamanho">

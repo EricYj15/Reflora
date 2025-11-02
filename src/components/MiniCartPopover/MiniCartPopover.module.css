@@ -124,10 +124,37 @@
 
 .empty {
   margin: 0;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
   font-family: 'Montserrat', sans-serif;
   font-size: 0.9rem;
   color: rgba(46, 46, 43, 0.7);
   text-align: center;
+}
+
+.emptyIcon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(95, 138, 139, 0.16);
+  color: rgba(46, 46, 43, 0.6);
+  font-size: 1.25rem;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(46, 46, 43, 0.55);
 }
 
 .footer {

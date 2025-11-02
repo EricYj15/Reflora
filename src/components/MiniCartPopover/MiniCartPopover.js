@@ -105,7 +105,11 @@ const MiniCartPopover = ({
           </strong>
         </div>
       ) : (
-        <p className={styles.empty}>Seu carrinho está vazio.</p>
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon} aria-hidden="true">🛍️</span>
+          <p className={styles.emptyText}>Sua sacola está vazia</p>
+          <p className={styles.emptyHint}>Adicione peças para ver o resumo por aqui.</p>
+        </div>
       )}
 
       <div className={styles.footer}>
