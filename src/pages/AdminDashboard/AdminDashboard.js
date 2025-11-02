@@ -28,6 +28,7 @@ const createEmptyProduct = () => ({
   description: '',
   priceValue: '',
   stock: '1',
+  isExclusive: false,
   sizeType: 'clothing', // 'clothing' ou 'numeric'
   sizes: createDefaultSizes(),
   images: []
@@ -195,6 +196,17 @@ const AdminDashboard = () => {
     }));
   };
 
+  const handleToggleExclusive = () => {
+    setForm((prev) => {
+      const nextExclusive = !prev.isExclusive;
+      return {
+        ...prev,
+        isExclusive: nextExclusive,
+        stock: nextExclusive ? '1' : (prev.stock === '' ? '1' : prev.stock)
+      };
+    });
+  };
+
   const handleSizeTypeChange = (event) => {
     const newType = event.target.value;
     setForm((prev) => ({
@@ -314,6 +326,7 @@ const AdminDashboard = () => {
       description: product.description || '',
       priceValue: String(product.priceValue ?? ''),
       stock: String(Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0),
+      isExclusive: Boolean(product.isExclusive),
       sizeType,
       sizes: sizes,
       images: Array.isArray(product.images) ? [...product.images] : []
@@ -347,12 +360,12 @@ const AdminDashboard = () => {
   };
 
   const buildPayload = () => {
-    const { name, description, priceValue, stock, sizes, images } = form;
+    const { name, description, priceValue, stock, sizes, images, isExclusive } = form;
 
     const sanitizedImages = Array.isArray(images) ? images.filter(Boolean) : [];
     const trimmedName = name.trim();
     const trimmedDescription = description.trim();
-    const stockNumber = Number(stock);
+    const stockNumber = isExclusive ? 1 : Number(stock);
 
     if (!trimmedName || !trimmedDescription || !priceValue) {
       throw new Error('Preencha todos os campos obrigatórios da peça.');
@@ -377,6 +390,7 @@ const AdminDashboard = () => {
       description: trimmedDescription,
       priceValue,
       stock: stockNumber,
+      isExclusive: Boolean(isExclusive),
       sizes: normalizedSizes,
       images: sanitizedImages
     };
@@ -609,9 +623,19 @@ const AdminDashboard = () => {
                   value={form.stock}
                   onChange={handleFormChange}
                   placeholder="1"
+                    disabled={form.isExclusive}
                   required
                 />
               </label>
+
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={!!form.isExclusive}
+                    onChange={handleToggleExclusive}
+                  />
+                  Peça exclusiva (estoque unitário)
+                </label>
 
               <fieldset className={styles.sizeFieldset}>
                 <legend>Tamanhos disponíveis</legend>
@@ -747,7 +771,7 @@ const AdminDashboard = () => {
                         <span>
                           Estoque:
                           {' '}
-                          <strong>{Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0}</strong>
+                          <strong>{product.isExclusive ? 'Peça exclusiva' : (Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0)}</strong>
                         </span>
                         <div className={styles.sizeBadges}>
                           {SIZE_KEYS.map((size) => (

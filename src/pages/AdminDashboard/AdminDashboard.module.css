@@ -258,6 +258,20 @@
   color: rgba(24, 32, 32, 0.75);
 }
 
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: rgba(24, 32, 32, 0.65);
+  cursor: pointer;
+}
+
+.checkboxRow input {
+  width: auto;
+  accent-color: var(--primary);
+}
+
 .form input,
 .form textarea {
   border-radius: 12px;

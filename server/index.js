@@ -245,7 +245,7 @@ function applyCoupon(code) {
   }
 }
 
-const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
+const SIZE_KEYS = ['PP', 'P', 'M', 'G', '36', '37', '38', '39', '40', '41', '42', '43', '44'];
 
 let mailTransporter = null;
 
@@ -638,16 +638,32 @@ function sanitizeProduct(product) {
   }
 
   const stockValue = Number(product.stock);
-  const stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : 0;
+  const isExclusive = Boolean(
+    product.isExclusive === true || product.isExclusive === 'true' || product.isExclusive === 1
+  );
+  let stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : 0;
+  if (isExclusive && stock < 1) {
+    stock = 1;
+  }
 
   const normalizedSizes = SIZE_KEYS.reduce((acc, size) => {
     const value = product.sizes?.[size];
-    acc[size] = typeof value === 'boolean' ? value : Boolean(value ?? true);
+
+    if (typeof value === 'boolean') {
+      acc[size] = value;
+    } else if (typeof value === 'string') {
+      acc[size] = value === 'true';
+    } else if (value != null) {
+      acc[size] = Boolean(value);
+    } else {
+      acc[size] = false;
+    }
+
     return acc;
   }, {});
 
   if (!Object.values(normalizedSizes).some(Boolean)) {
-    SIZE_KEYS.forEach((size) => {
+    ['PP', 'P', 'M', 'G'].forEach((size) => {
       normalizedSizes[size] = true;
     });
   }
@@ -655,6 +671,7 @@ function sanitizeProduct(product) {
   return {
     ...product,
     stock,
+    isExclusive,
     sizes: normalizedSizes,
     priceValue: Number(product.priceValue || 0),
     price: product.price ? String(product.price) : formatPriceDisplay(product.priceValue || 0)
@@ -683,8 +700,16 @@ function normalizeProductInput(payload = {}, existing = {}) {
     throw new Error('Informe um valor de preço válido.');
   }
 
-  const stockInput = payload.stock ?? existing.stock ?? 0;
-  const stockValue = Number(stockInput);
+  const exclusiveRaw = payload.isExclusive ?? payload.exclusive ?? existing.isExclusive ?? false;
+  const isExclusive = typeof exclusiveRaw === 'string'
+    ? exclusiveRaw.toLowerCase() === 'true'
+    : Boolean(exclusiveRaw);
+
+  const stockInput = payload.stock ?? existing.stock ?? (isExclusive ? 1 : 0);
+  let stockValue = Number(stockInput);
+  if (isExclusive) {
+    stockValue = 1;
+  }
   if (!Number.isFinite(stockValue) || stockValue < 0) {
     throw new Error('Informe uma quantidade em estoque válida.');
   }
@@ -754,6 +779,7 @@ function normalizeProductInput(payload = {}, existing = {}) {
     price: formatPriceDisplay(priceValue),
     images,
     stock: Number(Math.round(stockValue)),
+    isExclusive,
     sizes
   };
 }
