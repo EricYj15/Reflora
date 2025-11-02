@@ -5,7 +5,9 @@ import styles from './ProductGrid.module.css';
 import { products as fallbackProducts } from '../../data/products';
 import { apiFetch } from '../../utils/api';
 
-const SIZE_KEYS = ['PP', 'P', 'M', 'G'];
+const CLOTHING_SIZES = ['PP', 'P', 'M', 'G'];
+const NUMERIC_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44'];
+const SIZE_KEYS = [...CLOTHING_SIZES, ...NUMERIC_SIZES];
 
 const normalizeProduct = (product) => {
   if (!product) {
@@ -13,16 +15,29 @@ const normalizeProduct = (product) => {
   }
 
   const stockValue = Number(product.stock);
-  const stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : 0;
+  let stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : 0;
+
+  const isExclusive = Boolean(product.isExclusive);
+  if (isExclusive && stock <= 0) {
+    stock = 1;
+  }
 
   const sizes = SIZE_KEYS.reduce((acc, size) => {
     const value = product?.sizes?.[size];
-    acc[size] = typeof value === 'boolean' ? value : Boolean(value);
+    if (typeof value === 'boolean') {
+      acc[size] = value;
+    } else if (typeof value === 'string') {
+      acc[size] = value === 'true';
+    } else if (value != null) {
+      acc[size] = Boolean(value);
+    } else {
+      acc[size] = false;
+    }
     return acc;
   }, {});
 
   if (!Object.values(sizes).some(Boolean)) {
-    SIZE_KEYS.forEach((size) => {
+    CLOTHING_SIZES.forEach((size) => {
       sizes[size] = true;
     });
   }
@@ -37,7 +52,8 @@ const normalizeProduct = (product) => {
     ...product,
     stock,
     sizes,
-    images
+    images,
+    isExclusive
   };
 };
 
@@ -120,6 +136,7 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
           }
 
           const outOfStock = product.stock <= 0;
+          const availableSizes = SIZE_KEYS.filter((size) => product.sizes?.[size]);
 
           return (
           <div
@@ -156,13 +173,22 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
               </div>
             </div>
             <div className={styles.info}>
-              <h3 className={styles.productName}>{product.name}</h3>
+              <div className={styles.nameRow}>
+                <h3 className={styles.productName}>{product.name}</h3>
+                {product.isExclusive && (
+                  <span className={styles.exclusiveTag}>Peça exclusiva</span>
+                )}
+              </div>
               <p className={styles.price}>{product.price}</p>
               <p className={`${styles.stock} ${outOfStock ? styles.stockOut : ''}`}>
-                {outOfStock ? 'Esgotado no momento' : `Estoque: ${product.stock}`}
+                {outOfStock
+                  ? 'Esgotado no momento'
+                  : product.isExclusive
+                    ? 'Peça exclusiva (estoque unitário)'
+                    : `Estoque: ${product.stock}`}
               </p>
               <div className={styles.sizeRow} role="group" aria-label="Disponibilidade por tamanho">
-                {SIZE_KEYS.filter(size => product.sizes?.[size]).map((size) => (
+                {availableSizes.map((size) => (
                   <span
                     key={`${product.id || index}-${size}`}
                     className={`${styles.sizeBadge} ${styles.sizeAvailable}`}
@@ -171,7 +197,7 @@ const ProductGrid = ({ onProductClick, onAddToCart }) => {
                     {size}
                   </span>
                 ))}
-                {SIZE_KEYS.filter(size => product.sizes?.[size]).length === 0 && (
+                {availableSizes.length === 0 && (
                   <span className={styles.noSizes}>Sem tamanhos disponíveis</span>
                 )}
               </div>

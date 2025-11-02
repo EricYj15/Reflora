@@ -140,16 +140,40 @@
   text-align: center;
 }
 
+.nameRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
 .productName {
   font-family: 'Lora', serif;
   font-size: 1.2rem;
   color: var(--ink);
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .productCard:hover .productName { color: var(--wine); }
+
+.exclusiveTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(95, 138, 139, 0.18);
+  color: var(--primary);
+  border: 1px solid rgba(95, 138, 139, 0.35);
+}
 
 .price {
   font-family: 'Montserrat', sans-serif;
@@ -227,6 +251,10 @@
   .grid {
     grid-template-columns: 1fr;
     gap: 2.5rem;
+  }
+
+  .nameRow {
+    gap: 0.4rem;
   }
   .productCard:nth-child(2n),
   .productCard:nth-child(3n) {
