@@ -1102,10 +1102,8 @@ function normalizeProductInput(payload = {}, existing = {}) {
     throw new Error('Informe a descrição da peça.');
   }
 
-  const purchaseLink = String(payload.purchaseLink ?? existing.purchaseLink ?? '').trim();
-  if (!purchaseLink) {
-    throw new Error('Informe o link de compra da peça.');
-  }
+  const purchaseLinkRaw = payload.purchaseLink ?? existing.purchaseLink ?? '';
+  const purchaseLink = typeof purchaseLinkRaw === 'string' ? purchaseLinkRaw.trim() : '';
 
   const priceValueInput = payload.priceValue ?? payload.price ?? existing.priceValue ?? existing.price;
   const priceValue = parsePriceValue(priceValueInput);
@@ -1184,10 +1182,9 @@ function normalizeProductInput(payload = {}, existing = {}) {
     throw new Error('Informe pelo menos uma imagem.');
   }
 
-  return {
+  const normalized = {
     name,
     description,
-    purchaseLink,
     priceValue: Number(priceValue.toFixed(2)),
     price: formatPriceDisplay(priceValue),
     images,
@@ -1195,6 +1192,12 @@ function normalizeProductInput(payload = {}, existing = {}) {
     isExclusive,
     sizes
   };
+
+  if (purchaseLink) {
+    normalized.purchaseLink = purchaseLink;
+  }
+
+  return normalized;
 }
 
 async function buildPixData({ amount, txid, description }) {
