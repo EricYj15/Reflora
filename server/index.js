@@ -11,6 +11,7 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
+const productsSupabase = require('./db/supabase');
 require('dotenv').config();
 
 const fetch = globalThis.fetch
@@ -34,6 +35,7 @@ const usersFile = path.join(dbDir, 'users.json');
 const productsFile = path.join(dbDir, 'products.json');
 const couponsFile = path.join(dbDir, 'coupons.json');
 const uploadsDir = path.join(__dirname, 'uploads');
+let supabaseSyncQueue = Promise.resolve();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRATION = process.env.JWT_EXPIRATION || '7d';
@@ -123,6 +125,12 @@ if (!fs.existsSync(productsFile)) {
   fs.writeFileSync(productsFile, JSON.stringify({ products: productsSeed }, null, 2));
 }
 
+if (productsSupabase.isSupabaseConfigured()) {
+  hydrateProductsFromSupabase().catch((error) => {
+    console.error('Supabase • Erro de inicialização:', error);
+  });
+}
+
 if (!fs.existsSync(couponsFile)) {
   const defaultCoupons = {
     coupons: [
@@ -187,8 +195,20 @@ function readProducts() {
   }
 }
 
-function writeProducts(data) {
+function writeProducts(data, options = {}) {
+  const { skipSupabaseSync = false } = options;
+
   fs.writeFileSync(productsFile, JSON.stringify(data, null, 2));
+
+  if (!skipSupabaseSync && productsSupabase.isSupabaseConfigured()) {
+    const snapshot = Array.isArray(data?.products) ? data.products : [];
+    supabaseSyncQueue = supabaseSyncQueue
+      .catch(() => undefined)
+      .then(() => productsSupabase.upsertProducts(snapshot))
+      .catch((error) => {
+        console.error('Erro ao sincronizar produtos com Supabase:', error);
+      });
+  }
 }
 
 function readCoupons() {
@@ -204,6 +224,28 @@ function readCoupons() {
 
 function writeCoupons(data) {
   fs.writeFileSync(couponsFile, JSON.stringify(data, null, 2));
+}
+
+async function hydrateProductsFromSupabase() {
+  try {
+    const remoteProducts = await productsSupabase.fetchAllProducts();
+
+    if (Array.isArray(remoteProducts) && remoteProducts.length > 0) {
+      writeProducts({ products: remoteProducts }, { skipSupabaseSync: true });
+      console.info(`Supabase • catálogo carregado (${remoteProducts.length} produtos).`);
+      return;
+    }
+
+    const localSnapshot = readProducts();
+    const localProducts = Array.isArray(localSnapshot.products) ? localSnapshot.products : [];
+
+    if (localProducts.length > 0) {
+      await productsSupabase.upsertProducts(localProducts);
+      console.info('Supabase • catálogo local enviado (coleção remota vazia).');
+    }
+  } catch (error) {
+    console.error('Supabase • Falha ao sincronizar catálogo:', error);
+  }
 }
 
 function validateCoupon(code) {
