@@ -26,6 +26,8 @@ O backend precisa estar hospedado e acessível antes do frontend.
    - Adicione TODAS as variáveis do arquivo `.env.example`
    - **OBRIGATÓRIO**: `JWT_SECRET` (gere uma chave segura)
    - Exemplo de geração: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
+   - **Produção Correios**: defina `TRACKING_PROVIDER=correios` e, opcionalmente, `TRACKING_CACHE_TTL_SECONDS` e `TRACKING_USER_AGENT`
+   - **Caso utilize Linketrack**: adicione `TRACKING_PROVIDER=linketrack`, `LINKETRACK_USER` e `LINKETRACK_TOKEN`
 
 6. **Configure o comando de start:**
    - No painel do Railway, vá em **Settings**
@@ -203,6 +205,9 @@ Deve retornar: `{"status":"ok","timestamp":"..."}`
 - [ ] `PIX_KEY` - Se usar pagamento PIX
 - [ ] `MP_ACCESS_TOKEN` - Se usar Mercado Pago
 - [ ] `SMTP_*` - Se usar recuperação de senha por email
+- [ ] `TRACKING_PROVIDER` - Produção (padrão `correios`)
+- [ ] `LINKETRACK_USER`/`LINKETRACK_TOKEN` - Se optar por `TRACKING_PROVIDER=linketrack`
+- [ ] `TRACKING_CACHE_TTL_SECONDS` - Opcional (cache do rastreio)
 
 ---
 

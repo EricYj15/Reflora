@@ -51,6 +51,16 @@ const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const SMTP_FROM = process.env.SMTP_FROM || process.env.MAIL_FROM || '';
 const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
+const TRACKING_PROVIDER = String(process.env.TRACKING_PROVIDER || 'correios').toLowerCase();
+const TRACKING_CACHE_TTL_SECONDS = Number(process.env.TRACKING_CACHE_TTL_SECONDS || 180);
+const TRACKING_USER_AGENT = process.env.TRACKING_USER_AGENT || 'RefloraBackend/1.0';
+const CORREIOS_TRACKING_BASE_URL = process.env.CORREIOS_TRACKING_BASE_URL || 'https://proxyapp.correios.com.br/v1/sro-rastro';
+const CORREIOS_TRACKING_RESULT = process.env.CORREIOS_TRACKING_RESULT || 'T';
+const LINKETRACK_USER = process.env.LINKETRACK_USER || process.env.TRACKING_LINKETRACK_USER || '';
+const LINKETRACK_TOKEN = process.env.LINKETRACK_TOKEN || process.env.TRACKING_LINKETRACK_TOKEN || '';
+const TRACKING_FALLBACK_TO_MOCK = String(process.env.TRACKING_FALLBACK_TO_MOCK || '').toLowerCase() === 'true';
+
+const trackingCache = new Map();
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -2278,7 +2288,7 @@ app.patch('/api/orders/:orderId/tracking', authenticateToken, (req, res) => {
       : null;
     notifyOrderStatusByEmail(order, latestEntry?.status || order.status, latestEntry?.description || '');
 
-    res.json({ success: false, order });
+    res.json({ success: true, order });
   } catch (error) {
     console.error('Erro ao adicionar código de rastreamento:', error);
     res.status(500).json({ success: false, message: 'Erro ao atualizar pedido.' });
@@ -2344,49 +2354,422 @@ app.patch('/api/orders/:orderId/status', authenticateToken, (req, res) => {
   }
 });
 
+function getCachedTracking(trackingCode) {
+  if (TRACKING_CACHE_TTL_SECONDS <= 0) {
+    return null;
+  }
+
+  const entry = trackingCache.get(trackingCode);
+  if (!entry) {
+    return null;
+  }
+
+  const isExpired = Date.now() - entry.timestamp > TRACKING_CACHE_TTL_SECONDS * 1000;
+  if (isExpired) {
+    trackingCache.delete(trackingCode);
+    return null;
+  }
+
+  return entry.data;
+}
+
+function setCachedTracking(trackingCode, data) {
+  if (TRACKING_CACHE_TTL_SECONDS <= 0) {
+    return;
+  }
+
+  if (!data) {
+    trackingCache.delete(trackingCode);
+    return;
+  }
+
+  trackingCache.set(trackingCode, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+function toTimestamp(value) {
+  if (!value) {
+    return 0;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function normalizeTrackingEvent(event) {
+  if (!event || typeof event !== 'object') {
+    return null;
+  }
+
+  const status = String(event.status || '').trim() || 'Atualização';
+  const description = String(event.description || '').trim();
+  const location = event.location ? String(event.location).trim() : null;
+  let normalizedDate = null;
+
+  if (event.date) {
+    const parsed = new Date(event.date);
+    if (!Number.isNaN(parsed.getTime())) {
+      normalizedDate = parsed.toISOString();
+    } else if (typeof event.date === 'string') {
+      normalizedDate = event.date;
+    }
+  }
+
+  return {
+    date: normalizedDate,
+    status,
+    description: description && description !== status ? description : '',
+    location: location || null
+  };
+}
+
+function normalizeTrackingResult(result) {
+  if (!result || typeof result !== 'object') {
+    return null;
+  }
+
+  const normalizedCode = String(result.code || '').trim().toUpperCase();
+  const events = Array.isArray(result.events)
+    ? result.events.map(normalizeTrackingEvent).filter(Boolean)
+    : [];
+
+  events.sort((a, b) => toTimestamp(b.date) - toTimestamp(a.date));
+
+  return {
+    code: normalizedCode || null,
+    service: String(result.service || '').trim() || 'Correios',
+    provider: result.provider || TRACKING_PROVIDER,
+    events
+  };
+}
+
+function buildLocationFromUnidade(unidade) {
+  if (!unidade || typeof unidade !== 'object') {
+    return null;
+  }
+
+  const parts = [];
+
+  if (unidade.nome) {
+    parts.push(unidade.nome);
+  }
+
+  const endereco = unidade.endereco || {};
+  const bairro = endereco.bairro;
+  const cidade = endereco.cidade || endereco.localidade;
+  const uf = endereco.uf || endereco.siglaUF;
+
+  if (bairro) {
+    parts.push(bairro);
+  }
+
+  if (cidade) {
+    parts.push(cidade);
+  }
+
+  if (uf) {
+    parts.push(uf);
+  }
+
+  const filtered = parts.map((part) => String(part).trim()).filter(Boolean);
+  return filtered.length ? filtered.join(' - ') : null;
+}
+
+function mapCorreiosEvents(objeto) {
+  const eventos = Array.isArray(objeto?.eventos) ? objeto.eventos : [];
+
+  return eventos.map((evento) => {
+    const unidade = evento.unidadeDestino || evento.unidadeOrigem || evento.unidade;
+    const location = buildLocationFromUnidade(unidade);
+    const description = evento.detalhe || evento.complemento || evento.observacao || '';
+    const status = evento.descricao || evento.resumo || evento.situacao || 'Atualização';
+
+    return {
+      date: evento.dtHrCriado || evento.dataHora || null,
+      location,
+      status,
+      description: description && description !== status ? description : ''
+    };
+  });
+}
+
+async function fetchTrackingFromCorreios(trackingCode) {
+  const searchParams = new URLSearchParams();
+  searchParams.set('resultado', CORREIOS_TRACKING_RESULT);
+  searchParams.set('lingua', '101');
+
+  const url = `${CORREIOS_TRACKING_BASE_URL.replace(/\/$/, '')}/${trackingCode}?${searchParams.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': TRACKING_USER_AGENT
+    }
+  });
+
+  if (response.status === 404) {
+    const error = new Error('Código não encontrado nos Correios.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => '');
+    const error = new Error(`Correios retornou status ${response.status}`);
+    error.statusCode = response.status;
+    error.details = payload;
+    throw error;
+  }
+
+  const payload = await response.json();
+  const objetos = Array.isArray(payload?.objetos) ? payload.objetos : [];
+
+  if (!objetos.length) {
+    const error = new Error('Nenhuma informação de rastreio encontrada nos Correios.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const objeto = objetos[0];
+
+  if (objeto.erro) {
+    const error = new Error(objeto.mensagem || 'Código não encontrado nos Correios.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const events = mapCorreiosEvents(objeto);
+
+  return {
+    code: String(objeto.codObjeto || trackingCode).toUpperCase(),
+    service: objeto.tipoPostal?.descricao || objeto.modalidade || objeto.categoria || 'Correios',
+    provider: 'correios',
+    events
+  };
+}
+
+function buildIsoFromBrazilianDate(dateStr, timeStr) {
+  if (!dateStr || typeof dateStr !== 'string') {
+    return null;
+  }
+
+  const [day, month, year] = dateStr.split('/').map((chunk) => Number.parseInt(chunk, 10));
+
+  if (!day || !month || !year) {
+    return null;
+  }
+
+  const [hour = 0, minute = 0] = String(timeStr || '')
+    .split(':')
+    .map((chunk) => Number.parseInt(chunk, 10));
+
+  const date = new Date(Date.UTC(year, month - 1, day, Number.isFinite(hour) ? hour : 0, Number.isFinite(minute) ? minute : 0));
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function mapLinketrackEvent(evento) {
+  if (!evento || typeof evento !== 'object') {
+    return null;
+  }
+
+  const locationParts = [evento.local, evento.cidade, evento.uf]
+    .map((part) => (part ? String(part).trim() : ''))
+    .filter(Boolean);
+
+  const status = evento.status || evento.descricao || evento.situacao || 'Atualização';
+  const description = evento.subStatus || evento.complemento || evento.observacao || '';
+  const date = evento.dataHora || buildIsoFromBrazilianDate(evento.data, evento.hora);
+
+  return {
+    date: date || null,
+    location: locationParts.length ? locationParts.join(' - ') : null,
+    status,
+    description: description && description !== status ? description : ''
+  };
+}
+
+async function fetchTrackingFromLinketrack(trackingCode) {
+  if (!LINKETRACK_USER || !LINKETRACK_TOKEN) {
+    const error = new Error('TRACKING_PROVIDER=linketrack exige LINKETRACK_USER e LINKETRACK_TOKEN configurados.');
+    error.statusCode = 500;
+    error.needsConfiguration = true;
+    throw error;
+  }
+
+  const searchParams = new URLSearchParams();
+  searchParams.set('user', LINKETRACK_USER);
+  searchParams.set('token', LINKETRACK_TOKEN);
+  searchParams.set('codigo', trackingCode);
+
+  const url = `https://api.linketrack.com/track/json?${searchParams.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': TRACKING_USER_AGENT
+    }
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => '');
+    const error = new Error(`Linketrack retornou status ${response.status}`);
+    error.statusCode = response.status;
+    error.details = payload;
+    throw error;
+  }
+
+  const payload = await response.json();
+
+  if (payload.erro) {
+    const error = new Error(payload.mensagem || payload.error || 'Código não encontrado nos Correios.');
+    error.statusCode = Number.parseInt(payload.codigo, 10) === 404 ? 404 : 502;
+    throw error;
+  }
+
+  const events = Array.isArray(payload.eventos)
+    ? payload.eventos.map(mapLinketrackEvent).filter(Boolean)
+    : [];
+
+  return {
+    code: String(payload.codigo || trackingCode).toUpperCase(),
+    service: payload.servico || payload.tipo || 'Correios',
+    provider: 'linketrack',
+    events
+  };
+}
+
+function buildMockTracking(trackingCode) {
+  const now = Date.now();
+
+  return {
+    code: trackingCode,
+    service: 'Correios (demo)',
+    provider: 'mock',
+    events: [
+      {
+        date: new Date(now - 30 * 60 * 1000).toISOString(),
+        location: 'Unidade de Distribuição - São Paulo/SP',
+        status: 'Objeto em trânsito - por favor aguarde',
+        description: 'Objeto saiu para entrega ao destinatário'
+      },
+      {
+        date: new Date(now - 26 * 60 * 60 * 1000).toISOString(),
+        location: 'Centro de Tratamento - São Paulo/SP',
+        status: 'Objeto encaminhado',
+        description: 'Encaminhado para a unidade de distribuição da sua região'
+      },
+      {
+        date: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        location: 'Agência dos Correios - Campinas/SP',
+        status: 'Objeto postado',
+        description: 'Objeto postado após o horário limite da unidade'
+      }
+    ]
+  };
+}
+
+async function fetchTrackingFromProvider(trackingCode) {
+  switch (TRACKING_PROVIDER) {
+    case 'mock':
+      return buildMockTracking(trackingCode);
+    case 'linketrack':
+      return fetchTrackingFromLinketrack(trackingCode);
+    case 'correios':
+    default:
+      return fetchTrackingFromCorreios(trackingCode);
+  }
+}
+
+async function resolveTracking(trackingCode) {
+  const normalizedCode = String(trackingCode || '').trim().toUpperCase();
+
+  if (!normalizedCode) {
+    const error = new Error('Código de rastreamento inválido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cached = getCachedTracking(normalizedCode);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const rawResult = await fetchTrackingFromProvider(normalizedCode);
+    const normalized = normalizeTrackingResult(rawResult);
+
+    if (!normalized) {
+      const error = new Error('Resposta inválida do provedor de rastreamento.');
+      error.statusCode = 502;
+      throw error;
+    }
+
+    if (!normalized.code) {
+      normalized.code = normalizedCode;
+    }
+
+    setCachedTracking(normalizedCode, normalized);
+    return normalized;
+  } catch (error) {
+    if (TRACKING_FALLBACK_TO_MOCK && TRACKING_PROVIDER !== 'mock') {
+      console.warn('Tracking provider falhou. Utilizando resposta mock.', error);
+      const fallback = normalizeTrackingResult(buildMockTracking(normalizedCode));
+      setCachedTracking(normalizedCode, fallback);
+      return fallback;
+    }
+
+    throw error;
+  }
+}
+
 // Consultar rastreamento dos Correios
 app.get('/api/tracking/:trackingCode', async (req, res) => {
-  try {
-    const { trackingCode } = req.params;
+  const requestedCode = String(req.params.trackingCode || '').trim().toUpperCase();
 
-    if (!trackingCode || !/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(trackingCode)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Código de rastreamento inválido. Use o formato: AA123456789BR' 
+  if (!requestedCode || !/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(requestedCode)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Código de rastreamento inválido. Use o formato: AA123456789BR'
+    });
+  }
+
+  try {
+    const tracking = await resolveTracking(requestedCode);
+
+    if (!tracking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Nenhuma movimentação encontrada para este código. Tente novamente mais tarde.'
       });
     }
 
-    // API gratuita dos Correios (mock - você pode integrar com API real)
-    // Exemplo de API real: https://api.linketrack.com ou https://rastro.app
-    const mockTracking = {
-      code: trackingCode,
-      service: 'SEDEX',
-      events: [
-        {
-          date: new Date().toISOString(),
-          location: 'São Paulo - SP',
-          status: 'Objeto em trânsito - por favor aguarde',
-          description: 'Objeto saiu para entrega ao destinatário'
-        },
-        {
-          date: new Date(Date.now() - 86400000).toISOString(),
-          location: 'Centro de Distribuição - SP',
-          status: 'Objeto em trânsito',
-          description: 'Objeto encaminhado'
-        },
-        {
-          date: new Date(Date.now() - 172800000).toISOString(),
-          location: 'Agência dos Correios',
-          status: 'Objeto postado',
-          description: 'Objeto postado após o horário limite da unidade'
-        }
-      ]
-    };
-
-    res.json({ success: true, tracking: mockTracking });
+    res.json({ success: true, tracking });
   } catch (error) {
-    console.error('Erro ao consultar rastreamento:', error);
-    res.status(500).json({ success: false, message: 'Erro ao consultar rastreamento.' });
+    const statusCandidate = Number.parseInt(error.statusCode || error.status, 10);
+    const status = Number.isInteger(statusCandidate) && statusCandidate >= 400 && statusCandidate <= 599
+      ? statusCandidate
+      : 502;
+
+    console.error('Erro ao consultar rastreamento:', {
+      message: error.message,
+      status,
+      details: error.details || null
+    });
+
+    const message = status === 404
+      ? 'Não encontramos atualizações para o código informado. Verifique se o rastreio já foi disponibilizado pelos Correios.'
+      : 'Não foi possível consultar o rastreamento no momento. Tente novamente em alguns minutos.';
+
+    res.status(status).json({ success: false, message });
   }
 });
 

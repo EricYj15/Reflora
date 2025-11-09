@@ -254,6 +254,17 @@ href="https://pinterest.com/seu_perfil"
 - Atualize o contato do WhatsApp e e-mail exibidos na mesma seção.
 - Opcional: adicione seu CNPJ, endereço fiscal e link para termos completos no footer.
 
+### Rastreamento Correios (produção)
+
+- O endpoint `GET /api/tracking/:trackingCode` agora consulta diretamente os Correios (ProxyApp oficial) em produção e mantém um cache em memória para reduzir rate-limit.
+- Configure as variáveis no backend (Railway/Render):
+  - `TRACKING_PROVIDER=correios` (padrão)
+  - `TRACKING_CACHE_TTL_SECONDS=300` (ou outro intervalo em segundos)
+  - `TRACKING_USER_AGENT=RefloraBackend/1.0` (opcional, porém recomendado para identificação)
+  - Se preferir a API Linketrack, defina `TRACKING_PROVIDER=linketrack`, `LINKETRACK_USER` e `LINKETRACK_TOKEN`.
+  - Para ambiente de testes sem consulta externa, use `TRACKING_PROVIDER=mock` ou `TRACKING_FALLBACK_TO_MOCK=true`.
+- A resposta normalizada inclui `code`, `service` e `events` (descendentes por data). Caso os Correios ainda não tenham eventos, retornará 404 com mensagem amigável.
+
 ### Mercado Pago (cartão, boleto e saldo)
 ### Autenticação (JWT + Google + reCAPTCHA)
 

@@ -17,23 +17,33 @@ export default function TrackingModal({ trackingCode, onClose }) {
       setError(null);
 
       const response = await apiFetch(`/api/tracking/${trackingCode}`);
-      
-      if (!response.ok) {
-        throw new Error('Erro ao buscar rastreamento');
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Não foi possível consultar o rastreamento.');
       }
 
-      const data = await response.json();
       setTracking(data.tracking);
     } catch (err) {
       console.error('Erro ao buscar rastreamento:', err);
-      setError('Não foi possível consultar o rastreamento. Tente novamente mais tarde.');
+      setTracking(null);
+      setError(err.message || 'Não foi possível consultar o rastreamento. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
   }
 
   function formatDate(dateString) {
+    if (!dateString) {
+      return 'Data indisponível';
+    }
+
     const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return dateString;
+    }
+
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -74,7 +84,7 @@ export default function TrackingModal({ trackingCode, onClose }) {
                 </div>
                 <div className={styles.infoRow}>
                   <span className={styles.label}>Serviço:</span>
-                  <span className={styles.value}>{tracking.service}</span>
+                  <span className={styles.value}>{tracking.service || 'Correios'}</span>
                 </div>
               </div>
 
