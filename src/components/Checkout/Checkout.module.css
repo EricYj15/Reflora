@@ -50,6 +50,30 @@
   line-height: 1.5;
 }
 
+.authInlineButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 138, 139, 0.4);
+  background: transparent;
+  color: var(--primary);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border 0.2s ease;
+}
+
+.authInlineButton:hover,
+.authInlineButton:focus-visible {
+  background: rgba(95, 138, 139, 0.1);
+  border-color: rgba(95, 138, 139, 0.6);
+  outline: none;
+}
+
 .summaryCard {
   background: var(--surface);
   border-radius: 18px;
@@ -413,6 +437,41 @@
   font-family: 'Montserrat', sans-serif;
   font-weight: 600;
   margin: 0;
+}
+
+.authCallout {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(95, 138, 139, 0.35);
+  background: rgba(95, 138, 139, 0.08);
+  font-family: 'Montserrat', sans-serif;
+  color: rgba(46, 46, 43, 0.75);
+}
+
+.authCallout p {
+  margin: 0;
+}
+
+.authCalloutButton {
+  justify-self: start;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.authCalloutButton:hover {
+  background: #4f7373;
+  box-shadow: 0 8px 18px rgba(95, 138, 139, 0.24);
+  transform: translateY(-1px);
 }
 
 .submitButton {

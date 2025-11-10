@@ -332,6 +332,7 @@ function App() {
               items={cartItems}
               onOrderComplete={handleOrderComplete}
               onOpenPolicy={() => setIsPolicyOpen(true)}
+              onRequireAuth={handleOpenAuth}
             />
           }
         />

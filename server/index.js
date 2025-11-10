@@ -2125,14 +2125,28 @@ app.delete('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
   res.json({ success: true, product: sanitizeProduct(removed) });
 });
 
-app.post('/api/orders', attachUserIfPresent, async (req, res) => {
+app.post('/api/orders', authenticateToken, async (req, res) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({ success: false, message: 'Sessão expirada. Faça login novamente.' });
+    }
+
     const { customer, address, items, total, shipping, coupon } = req.body;
 
-    if (!customer?.name || !customer?.email || !address?.street || !Array.isArray(items) || items.length === 0) {
+    if (!customer?.name || !address?.street || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Dados insuficientes. Verifique se o formulário foi preenchido corretamente.'
+      });
+    }
+
+    const sessionEmail = typeof req.userEmail === 'string' ? req.userEmail.trim() : '';
+    const normalizedCustomerEmail = sessionEmail || String(customer?.email || '').trim();
+
+    if (!normalizedCustomerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Não foi possível identificar o e-mail do cliente. Faça login novamente.'
       });
     }
 
@@ -2154,11 +2168,11 @@ app.post('/api/orders', attachUserIfPresent, async (req, res) => {
 
     const order = {
       id: orderId,
-      userId: req.userId || null,
+      userId: req.userId,
       status: 'pending_payment', // pending_payment, paid, shipped, in_transit, delivered, cancelled
       customer: {
         name: customer.name.trim(),
-        email: customer.email.trim(),
+        email: normalizedCustomerEmail,
         phone: customer.phone?.trim() || '',
         document: customer.document?.trim() || ''
       },

@@ -34,8 +34,9 @@ O backend precisa estar hospedado e acessível antes do frontend.
    - Em **"Start Command"**, adicione: `node server/index.js`
    - Em **"Root Directory"**, deixe vazio (ou `/` se necessário)
 
-7. **Defina a porta:**
-   - Adicione a variável `PORT=4000` (ou use a variável que o Railway fornece automaticamente)
+7. **Porta de escuta:**
+   - **Não** defina manualmente a variável `PORT`. O Railway injeta esse valor automaticamente em cada deploy e é obrigatório usar o número fornecido por ele.
+   - Se quiser manter a porta 4000 para execução local, utilize apenas `SERVER_PORT=4000` no arquivo `.env`, sem replicar isso no Railway.
 
 8. **Deploy:**
    - O Railway fará o deploy automaticamente

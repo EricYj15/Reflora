@@ -288,6 +288,7 @@ href="https://pinterest.com/seu_perfil"
 6. Reinicie o servidor e o app (`npm run dev`) após alterar o `.env`.
 7. Usuários criados via email/senha são armazenados em `server/db/users.json` com senha criptografada (bcrypt).
 8. Para redefinir o ambiente, limpe o arquivo `users.json` (não remova a chave `users`).
+9. O checkout agora exige sessão autenticada; caso o cliente não esteja logado, o modal de login/cadastro é aberto antes de registrar o pedido.
 
 ### Recuperação de senha
 

@@ -20,7 +20,7 @@ const initialForm = {
   zip: ''
 };
 
-const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
+const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {}, onRequireAuth = () => {} }) => {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +37,7 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const { user, token, loading: authLoading } = useAuth();
   const lastZipLookupRef = useRef('');
+  const isAuthenticated = Boolean(user);
 
   const itemsCount = useMemo(
     () => items.reduce((sum, item) => sum + (item.quantity || 1), 0),
@@ -294,6 +295,17 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
       return;
     }
 
+    if (authLoading) {
+      setError('Aguarde enquanto verificamos sua sessão.');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setError('Faça login ou crie uma conta para finalizar o pedido.');
+      onRequireAuth?.();
+      return;
+    }
+
     if (!form.name || !form.email || !form.street || !form.city || !form.state) {
       setError('Preencha os campos obrigatórios do formulário (Nome, E-mail, Endereço, Cidade e Estado).');
       return;
@@ -348,7 +360,11 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
       }
 
       setSuccess(data);
-      setForm(initialForm);
+      setForm({
+        ...initialForm,
+        name: user?.name || '',
+        email: user?.email || ''
+      });
       setAcceptedTerms(false);
       setShippingQuote(null);
       setShippingError('');
@@ -378,9 +394,17 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
             <p className={styles.authHint}>
               {authLoading
                 ? 'Verificando sua sessão...'
-                : user
+                : isAuthenticated
                   ? `Você está conectado como ${user.name || user.email}. Seus pedidos ficarão vinculados a esta conta.`
-                  : 'Crie uma conta ou faça login para salvar seus pedidos com mais segurança e reutilizar seus dados.'}
+                  : (
+                    <>
+                      Para finalizar o pedido, entre na sua conta ou crie um cadastro rápido.
+                      {' '}
+                      <button type="button" className={styles.authInlineButton} onClick={onRequireAuth}>
+                        Entrar / Criar conta
+                      </button>
+                    </>
+                  )}
             </p>
           </div>
           <div className={styles.summaryCard}>
@@ -456,7 +480,15 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
                 </label>
                 <label>
                   E-mail*
-                  <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="contato@email.com" required />
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="contato@email.com"
+                    required
+                    readOnly={isAuthenticated}
+                  />
                 </label>
               </div>
               <div className={styles.fieldGroup}>
@@ -595,6 +627,15 @@ const Checkout = ({ items = [], onOrderComplete, onOpenPolicy = () => {} }) => {
                 .
               </span>
             </label>
+
+            {!authLoading && !isAuthenticated && (
+              <div className={styles.authCallout}>
+                <p>Você precisa estar logado para registrar o pedido.</p>
+                <button type="button" onClick={onRequireAuth} className={styles.authCalloutButton}>
+                  Entrar ou criar conta
+                </button>
+              </div>
+            )}
 
             {error && <p className={styles.error}>{error}</p>}
 

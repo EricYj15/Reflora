@@ -4,10 +4,15 @@ import React from 'react';
 import Checkout from '../components/Checkout/Checkout';
 import ContactFooter from '../components/ContactFooter/ContactFooter';
 
-const CheckoutPage = ({ items, onOrderComplete, onOpenPolicy }) => {
+const CheckoutPage = ({ items, onOrderComplete, onOpenPolicy, onRequireAuth }) => {
   return (
     <>
-      <Checkout items={items} onOrderComplete={onOrderComplete} onOpenPolicy={onOpenPolicy} />
+      <Checkout
+        items={items}
+        onOrderComplete={onOrderComplete}
+        onOpenPolicy={onOpenPolicy}
+        onRequireAuth={onRequireAuth}
+      />
       <ContactFooter />
     </>
   );
