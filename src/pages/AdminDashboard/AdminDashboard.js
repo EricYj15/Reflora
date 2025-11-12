@@ -218,7 +218,7 @@ const AdminDashboard = () => {
       console.error(err);
       showError(err.message || 'Erro ao adicionar código de rastreamento.');
     }
-  }, [showError, showSuccess, fetchOrders]);
+  }, [showError, showSuccess, fetchOrders, token]);
 
   const handleCancelOrder = useCallback(async (order) => {
     if (!order || order.status === 'cancelled') {
