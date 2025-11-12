@@ -217,6 +217,32 @@ function writeUsers(data) {
   fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
 }
 
+// Arquivo para registrar cadastros pendentes que aguardam verificação por código
+const pendingFile = path.join(dbDir, 'pending_registrations.json');
+
+function readPendingRegistrations() {
+  try {
+    if (!fs.existsSync(pendingFile)) {
+      fs.writeFileSync(pendingFile, JSON.stringify({ pending: [] }, null, 2));
+      return { pending: [] };
+    }
+    const raw = fs.readFileSync(pendingFile, 'utf-8');
+    const parsed = JSON.parse(raw || '{"pending":[]}');
+    return Array.isArray(parsed.pending) ? parsed : { pending: [] };
+  } catch (error) {
+    console.error('Erro ao ler pending_registrations.json:', error);
+    return { pending: [] };
+  }
+}
+
+function writePendingRegistrations(data) {
+  try {
+    fs.writeFileSync(pendingFile, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Erro ao escrever pending_registrations.json:', error);
+  }
+}
+
 function readProducts() {
   try {
     const raw = fs.readFileSync(productsFile, 'utf-8');
@@ -1715,12 +1741,15 @@ app.post(
     const normalizedEmail = normalizeEmail(email);
 
     const db = readUsers();
-    const existing = db.users.find((user) => user.email === normalizedEmail);
+    const pendingDb = readPendingRegistrations();
 
-    if (existing) {
+    const existing = db.users.find((user) => user.email === normalizedEmail);
+    const existingPending = pendingDb.pending.find((p) => p.email === normalizedEmail);
+
+    if (existing || existingPending) {
       return res.status(409).json({
         success: false,
-        message: 'Este e-mail já está cadastrado. Faça login ou utilize outro e-mail.'
+        message: 'Este e-mail já está em uso ou aguardando confirmação. Verifique seu e-mail ou utilize outro e-mail.'
       });
     }
 
@@ -1730,7 +1759,7 @@ app.post(
       const verificationCode = generateResetCode();
       const verificationHash = await bcrypt.hash(verificationCode, 12);
       const verificationRecord = createVerificationRecord(verificationHash);
-      const user = {
+      const pending = {
         id: randomUUID(),
         name: name.trim(),
         email: normalizedEmail,
@@ -1738,12 +1767,11 @@ app.post(
         provider: 'local',
         role,
         createdAt: new Date().toISOString(),
-        emailVerifiedAt: null,
         emailVerification: verificationRecord
       };
 
-      db.users.push(user);
-      writeUsers(db);
+      pendingDb.pending.push(pending);
+      writePendingRegistrations(pendingDb);
 
       const dispatched = await sendEmailVerificationEmail(normalizedEmail, verificationCode);
       if (!dispatched) {
@@ -1845,15 +1873,26 @@ app.post(
     const providedCode = String(req.body.code || '').trim();
 
     const db = readUsers();
-    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+    const pendingDb = readPendingRegistrations();
 
-    if (userIndex === -1) {
-      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    let userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+    let user = null;
+    let isPending = false;
+
+    if (userIndex !== -1) {
+      user = db.users[userIndex];
+    } else {
+      const pendingIndex = pendingDb.pending.findIndex((p) => p.email === normalizedEmail);
+      if (pendingIndex === -1) {
+        return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+      }
+      user = pendingDb.pending[pendingIndex];
+      isPending = true;
+      // normalize reference for later updates
+      userIndex = pendingIndex;
     }
 
-    const user = db.users[userIndex];
-
-    if (user.emailVerifiedAt) {
+    if (user.emailVerifiedAt && !isPending) {
       const token = createTokenForUser(user);
       return res.json({
         success: true,
@@ -1870,31 +1909,69 @@ app.post(
     }
 
     if (isVerificationExpired(verification)) {
-      delete user.emailVerification;
-      db.users[userIndex] = user;
-      writeUsers(db);
+      if (isPending) {
+        // remove pending
+        pendingDb.pending.splice(userIndex, 1);
+        writePendingRegistrations(pendingDb);
+      } else {
+        delete user.emailVerification;
+        db.users[userIndex] = user;
+        writeUsers(db);
+      }
       return res.status(400).json({ success: false, message: 'Código expirado. Solicite um novo código.' });
     }
 
     if (verification.attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
-      delete user.emailVerification;
-      db.users[userIndex] = user;
-      writeUsers(db);
+      if (isPending) {
+        pendingDb.pending.splice(userIndex, 1);
+        writePendingRegistrations(pendingDb);
+      } else {
+        delete user.emailVerification;
+        db.users[userIndex] = user;
+        writeUsers(db);
+      }
       return res.status(400).json({ success: false, message: 'Número máximo de tentativas excedido. Solicite um novo código.' });
     }
 
     const valid = await bcrypt.compare(providedCode, verification.codeHash || '');
 
     if (!valid) {
-      user.emailVerification = {
+      const updated = {
         ...verification,
         attempts: (verification.attempts || 0) + 1
       };
-      db.users[userIndex] = user;
-      writeUsers(db);
+      if (isPending) {
+        pendingDb.pending[userIndex].emailVerification = updated;
+        writePendingRegistrations(pendingDb);
+      } else {
+        db.users[userIndex].emailVerification = updated;
+        writeUsers(db);
+      }
       return res.status(400).json({ success: false, message: 'Código inválido. Verifique e tente novamente.' });
     }
 
+    // Código válido -> migrar pending para users ou marcar usuário existente como verificado
+    if (isPending) {
+      const newUser = {
+        id: user.id || randomUUID(),
+        name: user.name,
+        email: user.email,
+        passwordHash: user.passwordHash,
+        provider: user.provider || 'local',
+        role: user.role || 'customer',
+        createdAt: user.createdAt || new Date().toISOString(),
+        emailVerifiedAt: new Date().toISOString()
+      };
+      db.users.push(newUser);
+      writeUsers(db);
+      // remove pending
+      pendingDb.pending.splice(userIndex, 1);
+      writePendingRegistrations(pendingDb);
+      const token = createTokenForUser(newUser);
+      return res.json({ success: true, message: 'E-mail confirmado com sucesso!', user: sanitizePublicUser(newUser), token });
+    }
+
+    // existing user flow
     user.emailVerifiedAt = new Date().toISOString();
     delete user.emailVerification;
     db.users[userIndex] = user;
@@ -1922,19 +1999,29 @@ app.post(
 
     const normalizedEmail = normalizeEmail(req.body.email);
     const db = readUsers();
-    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+    const pendingDb = readPendingRegistrations();
 
-    if (userIndex === -1) {
-      return res.status(400).json({ success: false, message: 'E-mail não encontrado.' });
+    let userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+    let isPending = false;
+    let target = null;
+
+    if (userIndex !== -1) {
+      target = db.users[userIndex];
+    } else {
+      const pendingIndex = pendingDb.pending.findIndex((p) => p.email === normalizedEmail);
+      if (pendingIndex === -1) {
+        return res.status(400).json({ success: false, message: 'E-mail não encontrado.' });
+      }
+      isPending = true;
+      userIndex = pendingIndex;
+      target = pendingDb.pending[pendingIndex];
     }
 
-    const user = db.users[userIndex];
-
-    if (user.emailVerifiedAt) {
+    if (target.emailVerifiedAt && !isPending) {
       return res.json({ success: true, message: 'E-mail já confirmado. Faça login normalmente.' });
     }
 
-    const verification = user.emailVerification;
+    const verification = target.emailVerification;
 
     if (verification && !isVerificationExpired(verification) && isVerificationOnCooldown(verification)) {
       return res.status(429).json({ success: false, message: 'Aguarde alguns minutos antes de solicitar um novo código.' });
@@ -1944,9 +2031,13 @@ app.post(
     const newHash = await bcrypt.hash(newCode, 12);
     const newRecord = createVerificationRecord(newHash);
 
-    user.emailVerification = newRecord;
-    db.users[userIndex] = user;
-    writeUsers(db);
+    if (isPending) {
+      pendingDb.pending[userIndex].emailVerification = newRecord;
+      writePendingRegistrations(pendingDb);
+    } else {
+      db.users[userIndex].emailVerification = newRecord;
+      writeUsers(db);
+    }
 
     const dispatched = await sendEmailVerificationEmail(normalizedEmail, newCode);
     if (!dispatched) {
