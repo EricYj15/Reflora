@@ -5,6 +5,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const SUPABASE_SCHEMA = process.env.SUPABASE_SCHEMA || 'public';
 const SUPABASE_PRODUCTS_TABLE = process.env.SUPABASE_PRODUCTS_TABLE || 'products';
+const SUPABASE_ORDERS_TABLE = process.env.SUPABASE_ORDERS_TABLE || 'orders';
 
 let adminClient = null;
 
@@ -155,5 +156,6 @@ module.exports = {
   deleteProductById,
   deleteAllProducts,
   getSupabaseAdmin,
-  SUPABASE_PRODUCTS_TABLE
+  SUPABASE_PRODUCTS_TABLE,
+  SUPABASE_ORDERS_TABLE
 };

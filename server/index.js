@@ -12,6 +12,7 @@ const nodemailer = require('nodemailer');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 const productsSupabase = require('./db/supabase');
+const ordersSupabase = require('./db/ordersSupabase');
 require('dotenv').config();
 
 const fetch = globalThis.fetch
@@ -36,6 +37,7 @@ const productsFile = path.join(dbDir, 'products.json');
 const couponsFile = path.join(dbDir, 'coupons.json');
 const uploadsDir = path.join(__dirname, 'uploads');
 let supabaseSyncQueue = Promise.resolve();
+let ordersSupabaseSyncQueue = Promise.resolve();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRATION = process.env.JWT_EXPIRATION || '7d';
@@ -141,6 +143,12 @@ if (productsSupabase.isSupabaseConfigured()) {
   });
 }
 
+if (ordersSupabase.isSupabaseConfigured()) {
+  hydrateOrdersFromSupabase().catch((error) => {
+    console.error('Supabase • Erro de inicialização (pedidos):', error);
+  });
+}
+
 if (!fs.existsSync(couponsFile)) {
   const defaultCoupons = {
     coupons: [
@@ -175,8 +183,20 @@ function readDatabase() {
   }
 }
 
-function writeDatabase(data) {
+function writeDatabase(data, options = {}) {
+  const { skipSupabaseSync = false } = options;
+
   fs.writeFileSync(dbFile, JSON.stringify(data, null, 2));
+
+  if (!skipSupabaseSync && ordersSupabase.isSupabaseConfigured()) {
+    const snapshot = Array.isArray(data?.orders) ? data.orders : [];
+    ordersSupabaseSyncQueue = ordersSupabaseSyncQueue
+      .catch(() => undefined)
+      .then(() => ordersSupabase.upsertOrders(snapshot))
+      .catch((error) => {
+        console.error('Erro ao sincronizar pedidos com Supabase:', error);
+      });
+  }
 }
 
 function readUsers() {
@@ -255,6 +275,28 @@ async function hydrateProductsFromSupabase() {
     }
   } catch (error) {
     console.error('Supabase • Falha ao sincronizar catálogo:', error);
+  }
+}
+
+async function hydrateOrdersFromSupabase() {
+  try {
+    const remoteOrders = await ordersSupabase.fetchAllOrders();
+
+    if (Array.isArray(remoteOrders) && remoteOrders.length > 0) {
+      writeDatabase({ orders: remoteOrders }, { skipSupabaseSync: true });
+      console.info(`Supabase • pedidos carregados (${remoteOrders.length} registros).`);
+      return;
+    }
+
+    const localSnapshot = readDatabase();
+    const localOrders = Array.isArray(localSnapshot.orders) ? localSnapshot.orders : [];
+
+    if (localOrders.length > 0) {
+      await ordersSupabase.upsertOrders(localOrders);
+      console.info('Supabase • pedidos locais enviados (coleção remota vazia).');
+    }
+  } catch (error) {
+    console.error('Supabase • Falha ao sincronizar pedidos:', error);
   }
 }
 
