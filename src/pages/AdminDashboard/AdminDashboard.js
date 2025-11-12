@@ -194,7 +194,10 @@ const AdminDashboard = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       const response = await apiFetch(`/api/orders/${orderId}/tracking`, {
         method: 'PATCH',
         headers: {
