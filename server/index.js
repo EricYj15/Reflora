@@ -61,6 +61,9 @@ const CORREIOS_TRACKING_RESULT = process.env.CORREIOS_TRACKING_RESULT || 'T';
 const LINKETRACK_USER = process.env.LINKETRACK_USER || process.env.TRACKING_LINKETRACK_USER || '';
 const LINKETRACK_TOKEN = process.env.LINKETRACK_TOKEN || process.env.TRACKING_LINKETRACK_TOKEN || '';
 const TRACKING_FALLBACK_TO_MOCK = String(process.env.TRACKING_FALLBACK_TO_MOCK || '').toLowerCase() === 'true';
+const EMAIL_VERIFICATION_EXPIRATION_MINUTES = Number(process.env.EMAIL_VERIFICATION_EXPIRATION_MINUTES || 60);
+const EMAIL_VERIFICATION_COOLDOWN_MINUTES = Number(process.env.EMAIL_VERIFICATION_COOLDOWN_MINUTES || 5);
+const EMAIL_VERIFICATION_MAX_ATTEMPTS = Number(process.env.EMAIL_VERIFICATION_MAX_ATTEMPTS || 5);
 
 const trackingCache = new Map();
 
@@ -407,6 +410,46 @@ async function sendPasswordResetEmail(recipient, code) {
     return true;
   } catch (error) {
     console.error('Erro ao enviar e-mail de redefinição de senha:', error);
+    return false;
+  }
+}
+
+async function sendEmailVerificationEmail(recipient, code) {
+  if (!recipient || !code) {
+    return false;
+  }
+
+  if (!isEmailTransportConfigured()) {
+    console.info(`[Email Verification] Código ${code} para ${recipient} (SMTP não configurado).`);
+    return false;
+  }
+
+  try {
+    const transporter = getMailTransporter();
+    if (!transporter) {
+      return false;
+    }
+
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to: recipient,
+      subject: 'Confirme seu e-mail - Reflora',
+      text: `Olá!\n\nObrigado por criar uma conta na Reflora. Para concluir o seu cadastro, informe o código abaixo dentro de ${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não criou a conta, ignore esta mensagem.\n\nEquipe Reflora`,
+      html: `
+        <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
+          <p>Olá!</p>
+          <p>Obrigado por criar sua conta na <strong>Reflora</strong>.</p>
+          <p>Para concluir o cadastro, insira o código abaixo dentro de <strong>${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos</strong>:</p>
+          <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #1b4332;">${code}</p>
+          <p>Se você não criou essa conta, pode ignorar este e-mail.</p>
+          <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
+        </div>
+      `
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar e-mail de verificação:', error);
     return false;
   }
 }
@@ -834,12 +877,42 @@ function createResetRecord(codeHash) {
   };
 }
 
+function createVerificationRecord(codeHash) {
+  const now = Date.now();
+  return {
+    codeHash,
+    attempts: 0,
+    expiresAt: new Date(now + EMAIL_VERIFICATION_EXPIRATION_MINUTES * 60 * 1000).toISOString(),
+    issuedAt: new Date(now).toISOString()
+  };
+}
+
 function isResetRequestExpired(resetRequest = null) {
   if (!resetRequest?.expiresAt) {
     return true;
   }
   const expires = Date.parse(resetRequest.expiresAt);
   return Number.isNaN(expires) || Date.now() > expires;
+}
+
+function isVerificationExpired(verification = null) {
+  if (!verification?.expiresAt) {
+    return true;
+  }
+  const expires = Date.parse(verification.expiresAt);
+  return Number.isNaN(expires) || Date.now() > expires;
+}
+
+function isVerificationOnCooldown(verification = null) {
+  if (!verification?.issuedAt) {
+    return false;
+  }
+  const issued = Date.parse(verification.issuedAt);
+  if (Number.isNaN(issued)) {
+    return false;
+  }
+  const diff = Date.now() - issued;
+  return diff < EMAIL_VERIFICATION_COOLDOWN_MINUTES * 60 * 1000;
 }
 
 function isResetRequestOnCooldown(resetRequest = null) {
@@ -863,10 +936,11 @@ function sanitizePublicUser(user) {
     return null;
   }
 
-  const { passwordHash, googleId, resetRequest, ...rest } = user;
+  const { passwordHash, googleId, resetRequest, emailVerification, ...rest } = user;
   return {
     ...rest,
-    role: user.role || 'customer'
+    role: user.role || 'customer',
+    emailVerified: Boolean(user.emailVerifiedAt)
   };
 }
 
@@ -1620,8 +1694,14 @@ app.post(
     }
 
     if (RECAPTCHA_SECRET) {
+      const incomingToken = req.body?.captchaToken;
+      const tokenLength = typeof incomingToken === 'string' ? incomingToken.length : 0;
+      console.debug(
+        'reCAPTCHA • tentativa de cadastro',
+        typeof incomingToken === 'string' ? `token ${tokenLength} caracteres` : 'token ausente'
+      );
       try {
-        await validateRecaptchaToken(req.body?.captchaToken, extractClientIp(req));
+        await validateRecaptchaToken(incomingToken, extractClientIp(req));
       } catch (captchaError) {
         console.warn('Falha na validação reCAPTCHA:', captchaError);
         return res.status(400).json({
@@ -1647,6 +1727,9 @@ app.post(
     try {
       const passwordHash = await bcrypt.hash(password, 12);
       const role = isAdminEmail(normalizedEmail) ? 'admin' : 'customer';
+      const verificationCode = generateResetCode();
+      const verificationHash = await bcrypt.hash(verificationCode, 12);
+      const verificationRecord = createVerificationRecord(verificationHash);
       const user = {
         id: randomUUID(),
         name: name.trim(),
@@ -1654,18 +1737,25 @@ app.post(
         passwordHash,
         provider: 'local',
         role,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        emailVerifiedAt: null,
+        emailVerification: verificationRecord
       };
 
       db.users.push(user);
       writeUsers(db);
 
-      const token = createTokenForUser(user);
+      const dispatched = await sendEmailVerificationEmail(normalizedEmail, verificationCode);
+      if (!dispatched) {
+        console.info(`Código de verificação gerado para ${normalizedEmail}: ${verificationCode}`);
+      }
 
       res.status(201).json({
         success: true,
-        user: sanitizePublicUser(user),
-        token
+        verificationRequired: true,
+        email: normalizedEmail,
+        message: 'Enviamos um código de confirmação para o seu e-mail. Informe-o para finalizar o cadastro.',
+        expiresAt: verificationRecord.expiresAt
       });
     } catch (error) {
       console.error('Erro ao registrar usuário:', error);
@@ -1706,6 +1796,19 @@ app.post(
         return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
       }
 
+      if (!user.emailVerifiedAt) {
+        if (user.emailVerification) {
+          return res.status(403).json({
+            success: false,
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Confirme seu e-mail antes de entrar.'
+          });
+        }
+
+        user.emailVerifiedAt = user.createdAt || new Date().toISOString();
+        writeUsers(db);
+      }
+
       const role = ensureRole(user);
       if (role !== user.role) {
         user.role = role;
@@ -1723,6 +1826,142 @@ app.post(
 );
 
 app.post(
+  '/api/auth/verify-email',
+  [
+    body('email').isEmail().withMessage('Informe um e-mail válido.'),
+    body('code').isLength({ min: 4 }).withMessage('Informe o código recebido.')
+  ],
+  async (req, res) => {
+    if (!ensureJwtSecretOrRespond(res)) {
+      return;
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const providedCode = String(req.body.code || '').trim();
+
+    const db = readUsers();
+    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+
+    if (userIndex === -1) {
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    const user = db.users[userIndex];
+
+    if (user.emailVerifiedAt) {
+      const token = createTokenForUser(user);
+      return res.json({
+        success: true,
+        message: 'E-mail já confirmado anteriormente.',
+        user: sanitizePublicUser(user),
+        token
+      });
+    }
+
+    const verification = user.emailVerification;
+
+    if (!verification) {
+      return res.status(400).json({ success: false, message: 'Solicite um novo código de confirmação.' });
+    }
+
+    if (isVerificationExpired(verification)) {
+      delete user.emailVerification;
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Código expirado. Solicite um novo código.' });
+    }
+
+    if (verification.attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
+      delete user.emailVerification;
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Número máximo de tentativas excedido. Solicite um novo código.' });
+    }
+
+    const valid = await bcrypt.compare(providedCode, verification.codeHash || '');
+
+    if (!valid) {
+      user.emailVerification = {
+        ...verification,
+        attempts: (verification.attempts || 0) + 1
+      };
+      db.users[userIndex] = user;
+      writeUsers(db);
+      return res.status(400).json({ success: false, message: 'Código inválido. Verifique e tente novamente.' });
+    }
+
+    user.emailVerifiedAt = new Date().toISOString();
+    delete user.emailVerification;
+    db.users[userIndex] = user;
+    writeUsers(db);
+
+    const token = createTokenForUser(user);
+
+    res.json({
+      success: true,
+      message: 'E-mail confirmado com sucesso!',
+      user: sanitizePublicUser(user),
+      token
+    });
+  }
+);
+
+app.post(
+  '/api/auth/verify-email/resend',
+  [body('email').isEmail().withMessage('Informe um e-mail válido.')],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const db = readUsers();
+    const userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
+
+    if (userIndex === -1) {
+      return res.status(400).json({ success: false, message: 'E-mail não encontrado.' });
+    }
+
+    const user = db.users[userIndex];
+
+    if (user.emailVerifiedAt) {
+      return res.json({ success: true, message: 'E-mail já confirmado. Faça login normalmente.' });
+    }
+
+    const verification = user.emailVerification;
+
+    if (verification && !isVerificationExpired(verification) && isVerificationOnCooldown(verification)) {
+      return res.status(429).json({ success: false, message: 'Aguarde alguns minutos antes de solicitar um novo código.' });
+    }
+
+    const newCode = generateResetCode();
+    const newHash = await bcrypt.hash(newCode, 12);
+    const newRecord = createVerificationRecord(newHash);
+
+    user.emailVerification = newRecord;
+    db.users[userIndex] = user;
+    writeUsers(db);
+
+    const dispatched = await sendEmailVerificationEmail(normalizedEmail, newCode);
+    if (!dispatched) {
+      console.info(`Novo código de verificação gerado para ${normalizedEmail}: ${newCode}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Enviamos um novo código para o seu e-mail.',
+      expiresAt: newRecord.expiresAt
+    });
+  }
+);
+
+app.post(
   '/api/auth/reset-password/request',
   [body('email').isEmail().withMessage('Informe um e-mail válido.')],
   async (req, res) => {
@@ -1736,8 +1975,14 @@ app.post(
     }
 
     if (RECAPTCHA_SECRET) {
+      const incomingToken = req.body?.captchaToken;
+      const tokenLength = typeof incomingToken === 'string' ? incomingToken.length : 0;
+      console.debug(
+        'reCAPTCHA • solicitação de reset',
+        typeof incomingToken === 'string' ? `token ${tokenLength} caracteres` : 'token ausente'
+      );
       try {
-        await validateRecaptchaToken(req.body?.captchaToken, extractClientIp(req));
+        await validateRecaptchaToken(incomingToken, extractClientIp(req));
       } catch (captchaError) {
         console.warn('Falha na validação reCAPTCHA (reset request):', captchaError);
         return res.status(400).json({
@@ -1801,8 +2046,14 @@ app.post(
     }
 
     if (RECAPTCHA_SECRET) {
+      const incomingToken = req.body?.captchaToken;
+      const tokenLength = typeof incomingToken === 'string' ? incomingToken.length : 0;
+      console.debug(
+        'reCAPTCHA • confirmação de reset',
+        typeof incomingToken === 'string' ? `token ${tokenLength} caracteres` : 'token ausente'
+      );
       try {
-        await validateRecaptchaToken(req.body?.captchaToken, extractClientIp(req));
+        await validateRecaptchaToken(incomingToken, extractClientIp(req));
       } catch (captchaError) {
         console.warn('Falha na validação reCAPTCHA (reset confirm):', captchaError);
         return res.status(400).json({
@@ -1926,7 +2177,8 @@ app.post('/api/auth/google', async (req, res) => {
         provider: 'google',
         googleId,
         role: isAdminEmail(email) ? 'admin' : 'customer',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        emailVerifiedAt: new Date().toISOString()
       };
       db.users.push(user);
       writeUsers(db);
@@ -1937,11 +2189,17 @@ app.post('/api/auth/google', async (req, res) => {
       if (role !== user.role) {
         user.role = role;
       }
+      if (!user.emailVerifiedAt) {
+        user.emailVerifiedAt = new Date().toISOString();
+      }
       writeUsers(db);
     } else {
       const role = ensureRole(user);
       if (role !== user.role) {
         user.role = role;
+        writeUsers(db);
+      } else if (!user.emailVerifiedAt) {
+        user.emailVerifiedAt = new Date().toISOString();
         writeUsers(db);
       }
     }

@@ -10,6 +10,8 @@ const AuthContext = createContext({
   loginWithGoogleCredential: async () => {},
   requestPasswordReset: async () => {},
   confirmPasswordReset: async () => {},
+  verifyEmail: async () => {},
+  resendVerification: async () => {},
   logout: () => {},
   refreshUser: async () => {}
 });
@@ -162,8 +164,10 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    persistAuth(data);
-    return data.user;
+    if (data.token) {
+      persistAuth(data);
+    }
+    return data;
   }, [persistAuth]);
 
   const login = useCallback(async ({ email, password }) => {
@@ -208,6 +212,24 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  const verifyEmail = useCallback(async ({ email, code }) => {
+    const data = await requestJson('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code })
+    });
+    if (data.token) {
+      persistAuth(data);
+    }
+    return data;
+  }, [persistAuth]);
+
+  const resendVerification = useCallback(async ({ email }) => {
+    return requestJson('/api/auth/verify-email/resend', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }, []);
+
   const logout = useCallback(() => {
     setStoredToken(null);
     setToken(null);
@@ -247,6 +269,8 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogleCredential,
     requestPasswordReset,
     confirmPasswordReset,
+    verifyEmail,
+    resendVerification,
     logout,
     refreshUser
   }), [
@@ -258,8 +282,10 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     register,
     requestPasswordReset,
+    resendVerification,
     token,
-    user
+    user,
+    verifyEmail
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

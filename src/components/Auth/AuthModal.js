@@ -9,7 +9,8 @@ import ReCAPTCHA from 'react-google-recaptcha';
 const View = {
   LOGIN: 'login',
   REGISTER: 'register',
-  FORGOT: 'forgot'
+  FORGOT: 'forgot',
+  VERIFY: 'verifyEmail'
 };
 
 const ForgotStep = {
@@ -39,13 +40,22 @@ const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY || '';
 const recaptchaEnabled = Boolean(recaptchaSiteKey);
 
 const AuthModal = ({ open, onClose }) => {
-  const { login, register, requestPasswordReset, confirmPasswordReset, loginWithGoogleCredential } = useAuth();
+  const {
+    login,
+    register,
+    requestPasswordReset,
+    confirmPasswordReset,
+    verifyEmail,
+    resendVerification,
+    loginWithGoogleCredential
+  } = useAuth();
   const googleEnabled = Boolean(process.env.REACT_APP_GOOGLE_CLIENT_ID);
   const [activeView, setActiveView] = useState(View.LOGIN);
   const [loginForm, setLoginForm] = useState(initialLoginForm);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
   const [forgotForm, setForgotForm] = useState(initialForgotForm);
   const [forgotStep, setForgotStep] = useState(ForgotStep.REQUEST);
+  const [verificationForm, setVerificationForm] = useState({ email: '', code: '' });
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +71,7 @@ const AuthModal = ({ open, onClose }) => {
       setRegisterForm(initialRegisterForm);
       setForgotForm(initialForgotForm);
       setForgotStep(ForgotStep.REQUEST);
+    setVerificationForm({ email: '', code: '' });
       setError('');
       setInfo('');
       setSubmitting(false);
@@ -149,9 +160,16 @@ const AuthModal = ({ open, onClose }) => {
         email: (loginForm.email || registerForm.email || prev.email || '').trim()
       }));
       setForgotStep(ForgotStep.REQUEST);
+      setVerificationForm({ email: '', code: '' });
+    } else if (view === View.VERIFY) {
+      setVerificationForm((prev) => ({
+        email: (registerForm.email || loginForm.email || prev.email || '').trim(),
+        code: ''
+      }));
     } else {
       setForgotForm(initialForgotForm);
       setForgotStep(ForgotStep.REQUEST);
+      setVerificationForm({ email: '', code: '' });
     }
 
     setActiveView(view);
@@ -169,7 +187,28 @@ const AuthModal = ({ open, onClose }) => {
       return;
     }
 
-    await runWithFeedback(() => register({ ...registerForm, captchaToken: registerCaptchaToken }));
+    try {
+      const data = await runWithFeedback(
+        () => register({ ...registerForm, captchaToken: registerCaptchaToken }),
+        { closeOnSuccess: false }
+      );
+
+      if (data?.verificationRequired) {
+        const sanitizedEmail = (data.email || registerForm.email || '').trim();
+        setVerificationForm({ email: sanitizedEmail, code: '' });
+        setInfo(data.message || 'Enviamos um código de confirmação para o seu e-mail.');
+        setActiveView(View.VERIFY);
+      } else {
+        onClose?.();
+      }
+    } catch (err) {
+      // runWithFeedback already trata a mensagem de erro
+    } finally {
+      setRegisterCaptchaToken('');
+      if (registerRecaptchaRef.current) {
+        registerRecaptchaRef.current.reset();
+      }
+    }
   };
 
   const title = useMemo(() => {
@@ -178,6 +217,8 @@ const AuthModal = ({ open, onClose }) => {
         return 'Criar conta';
       case View.FORGOT:
         return 'Redefinir senha';
+      case View.VERIFY:
+        return 'Confirmar e-mail';
       case View.LOGIN:
       default:
         return 'Entrar';
@@ -276,6 +317,51 @@ const AuthModal = ({ open, onClose }) => {
       setActiveView(View.LOGIN);
     } catch (err) {
       // erro tratado no runWithFeedback
+    }
+  };
+
+  const handleVerifyEmail = async (event) => {
+    event.preventDefault();
+
+    const email = verificationForm.email.trim();
+    const code = verificationForm.code.trim();
+
+    if (!email || !code) {
+      setError('Informe o e-mail e o código para confirmar.');
+      return;
+    }
+
+    try {
+      await runWithFeedback(
+        () => verifyEmail({ email, code }),
+        { closeOnSuccess: true }
+      );
+    } catch (err) {
+      // mensagem tratada em runWithFeedback
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (submitting) {
+      return;
+    }
+
+    const email = verificationForm.email.trim();
+
+    if (!email) {
+      setError('Informe o e-mail cadastrado para reenviar o código.');
+      return;
+    }
+
+    try {
+      const result = await runWithFeedback(
+        () => resendVerification({ email }),
+        { closeOnSuccess: false }
+      );
+      setInfo(result?.message || 'Enviamos um novo código para o seu e-mail.');
+      setVerificationForm((prev) => ({ ...prev, code: '' }));
+    } catch (err) {
+      // mensagem tratada em runWithFeedback
     }
   };
 
@@ -385,6 +471,59 @@ const AuthModal = ({ open, onClose }) => {
                 disabled={submitting || (recaptchaEnabled && !registerCaptchaToken)}
               >
                 {submitting ? 'Criando conta...' : 'Criar conta'}
+              </button>
+            </form>
+          ) : activeView === View.VERIFY ? (
+            <form onSubmit={handleVerifyEmail} className={styles.form}>
+              <p>
+                Enviamos um código de confirmação para o seu e-mail. Informe abaixo para concluir o cadastro.
+              </p>
+              <label>
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={verificationForm.email}
+                  onChange={handleInputChange(setVerificationForm)}
+                  required
+                />
+              </label>
+              <label>
+                Código de verificação
+                <input
+                  name="code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Digite o código de 6 dígitos"
+                  value={verificationForm.code}
+                  onChange={handleInputChange(setVerificationForm)}
+                  required
+                  maxLength={6}
+                />
+              </label>
+
+              <div className={styles.actionsRow}>
+                <button type="button" className={styles.linkButton} onClick={() => goToView(View.LOGIN)}>
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  onClick={handleResendVerification}
+                  disabled={submitting}
+                >
+                  Reenviar código
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={submitting || verificationForm.code.trim().length === 0}
+              >
+                {submitting ? 'Confirmando...' : 'Confirmar e-mail'}
               </button>
             </form>
           ) : forgotStep === ForgotStep.REQUEST ? (
@@ -500,46 +639,57 @@ const AuthModal = ({ open, onClose }) => {
             </form>
           )}
 
-          <div className={styles.divider}>
-            <span>ou</span>
-          </div>
+          {activeView === View.LOGIN && (
+            <>
+              <div className={styles.divider}>
+                <span>ou</span>
+              </div>
 
-          {googleEnabled ? (
-            <div className={styles.googleButtonWrapper}>
-              <GoogleLogin
-                onSuccess={async (credentialResponse) => {
-                  if (!credentialResponse?.credential) {
-                    setError('Resposta inválida do Google.');
-                    return;
-                  }
+              {googleEnabled ? (
+                <div className={styles.googleButtonWrapper}>
+                  <GoogleLogin
+                    onSuccess={async (credentialResponse) => {
+                      if (!credentialResponse?.credential) {
+                        setError('Resposta inválida do Google.');
+                        return;
+                      }
 
-                  try {
-                    const credential = credentialResponse.credential;
-                    await runWithFeedback(() => loginWithGoogleCredential(credential));
-                  } catch (err) {
-                    console.error('Erro no login Google:', err);
-                    setError(err.message || 'Falha na autenticação com o Google.');
-                  }
-                }}
-                onError={() => {
-                  setError('Não foi possível conectar ao Google. Tente novamente.');
-                }}
-                useOneTap
-                theme="outline"
-                width="100%"
-                size="large"
-                text="continue_with"
-              />
-            </div>
-          ) : (
-            <p className={styles.googleDisabled}>
-              Configure a variável <code>REACT_APP_GOOGLE_CLIENT_ID</code> para habilitar o login com Google.
-            </p>
+                      try {
+                        const credential = credentialResponse.credential;
+                        await runWithFeedback(() => loginWithGoogleCredential(credential));
+                      } catch (err) {
+                        console.error('Erro no login Google:', err);
+                        setError(err.message || 'Falha na autenticação com o Google.');
+                      }
+                    }}
+                    onError={() => {
+                      setError('Não foi possível conectar ao Google. Tente novamente.');
+                    }}
+                    useOneTap
+                    theme="outline"
+                    width="100%"
+                    size="large"
+                    text="continue_with"
+                  />
+                </div>
+              ) : (
+                <p className={styles.googleDisabled}>
+                  Configure a variável <code>REACT_APP_GOOGLE_CLIENT_ID</code> para habilitar o login com Google.
+                </p>
+              )}
+            </>
           )}
 
           {activeView === View.FORGOT ? (
             <p className={styles.switcher}>
               Lembrou sua senha?{' '}
+              <button type="button" onClick={() => goToView(View.LOGIN)} className={styles.switchButton}>
+                Entrar
+              </button>
+            </p>
+          ) : activeView === View.VERIFY ? (
+            <p className={styles.switcher}>
+              Já confirmou sua conta?{' '}
               <button type="button" onClick={() => goToView(View.LOGIN)} className={styles.switchButton}>
                 Entrar
               </button>
