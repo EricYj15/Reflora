@@ -181,15 +181,27 @@ const AdminDashboard = () => {
     }
   }, [showError]);
 
-  const handleAddTracking = useCallback(async (orderId) => {
-    const trackingCode = prompt('Digite o código de rastreamento dos Correios (ex: AA123456789BR):');
-    
-    if (!trackingCode) return;
+  const handleAddTracking = useCallback(async (orderId, currentCode = '') => {
+    const trackingCode = prompt('Digite o código de rastreamento dos Correios (ex: AA123456789BR):', currentCode || '');
+
+    if (trackingCode == null) {
+      return;
+    }
 
     const normalized = trackingCode.trim().toUpperCase();
     
+    if (normalized.length === 0) {
+      showError('Informe um código válido para atualizar o rastreio.');
+      return;
+    }
+
     if (!/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(normalized)) {
       showError('Código inválido. Use o formato: AA123456789BR');
+      return;
+    }
+
+    if (currentCode && normalized === currentCode.toUpperCase()) {
+      showFeedback('Código de rastreamento mantido sem alterações.');
       return;
     }
 
@@ -212,13 +224,13 @@ const AdminDashboard = () => {
         throw new Error(errorData.message || 'Erro ao adicionar código de rastreamento');
       }
 
-      showSuccess('Código de rastreamento adicionado com sucesso!');
+      showSuccess(currentCode ? 'Código de rastreamento atualizado com sucesso!' : 'Código de rastreamento adicionado com sucesso!');
       fetchOrders(); // Recarregar pedidos
     } catch (err) {
       console.error(err);
       showError(err.message || 'Erro ao adicionar código de rastreamento.');
     }
-  }, [showError, showSuccess, fetchOrders, token]);
+  }, [showError, showSuccess, showFeedback, fetchOrders, token]);
 
   const handleCancelOrder = useCallback(async (order) => {
     if (!order || order.status === 'cancelled') {
@@ -687,19 +699,30 @@ const AdminDashboard = () => {
                         {order.mercadoPago?.available && <span className={styles.badge}>MP</span>}
                       </td>
                       <td>
-                        {order.trackingCode ? (
-                          <div className={styles.trackingCell}>
-                            <code>{order.trackingCode}</code>
-                          </div>
-                        ) : (
-                          <button 
-                            className={styles.addTrackingButton}
-                            onClick={() => handleAddTracking(order.id)}
-                            title="Adicionar código de rastreamento"
-                          >
-                            + Adicionar
-                          </button>
-                        )}
+                        <div className={styles.trackingCell}>
+                          {order.trackingCode ? (
+                            <>
+                              <code>{order.trackingCode}</code>
+                              <button
+                                type="button"
+                                className={styles.addTrackingButton}
+                                onClick={() => handleAddTracking(order.id, order.trackingCode)}
+                                title="Editar código de rastreamento"
+                              >
+                                Editar
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.addTrackingButton}
+                              onClick={() => handleAddTracking(order.id)}
+                              title="Adicionar código de rastreamento"
+                            >
+                              + Adicionar
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className={styles.rowActions}>
