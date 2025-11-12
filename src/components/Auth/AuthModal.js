@@ -26,7 +26,8 @@ const initialLoginForm = {
 const initialRegisterForm = {
   name: '',
   email: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
 };
 
 const initialForgotForm = {
@@ -56,6 +57,11 @@ const AuthModal = ({ open, onClose }) => {
   const [forgotForm, setForgotForm] = useState(initialForgotForm);
   const [forgotStep, setForgotStep] = useState(ForgotStep.REQUEST);
   const [verificationForm, setVerificationForm] = useState({ email: '', code: '' });
+  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
+  const [registerPasswordVisible, setRegisterPasswordVisible] = useState(false);
+  const [registerConfirmVisible, setRegisterConfirmVisible] = useState(false);
+  const [forgotNewPasswordVisible, setForgotNewPasswordVisible] = useState(false);
+  const [forgotConfirmPasswordVisible, setForgotConfirmPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -153,6 +159,11 @@ const AuthModal = ({ open, onClose }) => {
 
   const goToView = (view) => {
     resetInteraction();
+    setLoginPasswordVisible(false);
+    setRegisterPasswordVisible(false);
+    setRegisterConfirmVisible(false);
+    setForgotNewPasswordVisible(false);
+    setForgotConfirmPasswordVisible(false);
 
     if (view === View.FORGOT) {
       setForgotForm((prev) => ({
@@ -161,6 +172,11 @@ const AuthModal = ({ open, onClose }) => {
       }));
       setForgotStep(ForgotStep.REQUEST);
       setVerificationForm({ email: '', code: '' });
+  setLoginPasswordVisible(false);
+  setRegisterPasswordVisible(false);
+  setRegisterConfirmVisible(false);
+  setForgotNewPasswordVisible(false);
+  setForgotConfirmPasswordVisible(false);
     } else if (view === View.VERIFY) {
       setVerificationForm((prev) => ({
         email: (registerForm.email || loginForm.email || prev.email || '').trim(),
@@ -184,6 +200,11 @@ const AuthModal = ({ open, onClose }) => {
     event.preventDefault();
     if (recaptchaEnabled && !registerCaptchaToken) {
       setError('Confirme que você não é um robô para continuar.');
+      return;
+    }
+
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setError('As senhas informadas não conferem.');
       return;
     }
 
@@ -226,6 +247,8 @@ const AuthModal = ({ open, onClose }) => {
   }, [activeView]);
 
   const handleForgotBack = () => {
+    setForgotNewPasswordVisible(false);
+    setForgotConfirmPasswordVisible(false);
     setForgotStep(ForgotStep.REQUEST);
     setForgotCaptchaToken('');
     if (forgotRecaptchaRef.current) {
@@ -394,15 +417,25 @@ const AuthModal = ({ open, onClose }) => {
               </label>
               <label>
                 Senha
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={loginForm.password}
-                  onChange={handleInputChange(setLoginForm)}
-                  required
-                  minLength={8}
-                />
+                <div className={styles.passwordField}>
+                  <input
+                    name="password"
+                    type={loginPasswordVisible ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={loginForm.password}
+                    onChange={handleInputChange(setLoginForm)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={() => setLoginPasswordVisible((prev) => !prev)}
+                    aria-label={loginPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {loginPasswordVisible ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
               </label>
 
               <button type="button" className={styles.linkButton} onClick={() => goToView(View.FORGOT)}>
@@ -439,16 +472,49 @@ const AuthModal = ({ open, onClose }) => {
               </label>
               <label>
                 Senha
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={registerForm.password}
-                  onChange={handleInputChange(setRegisterForm)}
-                  required
-                  minLength={8}
-                />
+                <div className={styles.passwordField}>
+                  <input
+                    name="password"
+                    type={registerPasswordVisible ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={registerForm.password}
+                    onChange={handleInputChange(setRegisterForm)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={() => setRegisterPasswordVisible((prev) => !prev)}
+                    aria-label={registerPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {registerPasswordVisible ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
               </label>
+              <label>
+                Confirmar senha
+                <div className={styles.passwordField}>
+                  <input
+                    name="confirmPassword"
+                    type={registerConfirmVisible ? 'text' : 'password'}
+                    placeholder="Repita a senha"
+                    value={registerForm.confirmPassword}
+                    onChange={handleInputChange(setRegisterForm)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={() => setRegisterConfirmVisible((prev) => !prev)}
+                    aria-label={registerConfirmVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {registerConfirmVisible ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+              </label>
+              <p className={styles.passwordHint}>Use ao menos 8 caracteres. Recomendamos combinar letras, números e símbolos.</p>
 
               {recaptchaEnabled ? (
                 <div className={styles.captchaWrapper}>
@@ -586,27 +652,47 @@ const AuthModal = ({ open, onClose }) => {
               </label>
               <label>
                 Nova senha
-                <input
-                  name="newPassword"
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={forgotForm.newPassword}
-                  onChange={handleInputChange(setForgotForm)}
-                  required
-                  minLength={8}
-                />
+                <div className={styles.passwordField}>
+                  <input
+                    name="newPassword"
+                    type={forgotNewPasswordVisible ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={forgotForm.newPassword}
+                    onChange={handleInputChange(setForgotForm)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={() => setForgotNewPasswordVisible((prev) => !prev)}
+                    aria-label={forgotNewPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {forgotNewPasswordVisible ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
               </label>
               <label>
                 Confirmar nova senha
-                <input
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Repita a nova senha"
-                  value={forgotForm.confirmPassword}
-                  onChange={handleInputChange(setForgotForm)}
-                  required
-                  minLength={8}
-                />
+                <div className={styles.passwordField}>
+                  <input
+                    name="confirmPassword"
+                    type={forgotConfirmPasswordVisible ? 'text' : 'password'}
+                    placeholder="Repita a nova senha"
+                    value={forgotForm.confirmPassword}
+                    onChange={handleInputChange(setForgotForm)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className={styles.togglePassword}
+                    onClick={() => setForgotConfirmPasswordVisible((prev) => !prev)}
+                    aria-label={forgotConfirmPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {forgotConfirmPasswordVisible ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
               </label>
 
               {recaptchaEnabled ? (
