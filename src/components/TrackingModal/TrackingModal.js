@@ -128,6 +128,12 @@ export default function TrackingModal({ trackingCode, onClose }) {
                 )}
               </div>
 
+              {tracking.provider === 'mock' && (
+                <p className={styles.mockNotice}>
+                  ℹ️ Os Correios ainda não disponibilizaram movimentações para este código. Assim que houver atualização oficial, o histórico será exibido aqui.
+                </p>
+              )}
+
               <div className={styles.footer}>
                 <p className={styles.disclaimer}>
                   ℹ️ As informações são atualizadas automaticamente pelos Correios.

@@ -235,6 +235,17 @@
   font-style: italic;
 }
 
+.mockNotice {
+  margin-top: 16px;
+  background: rgba(255, 196, 81, 0.18);
+  border-left: 4px solid #c48b22;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #6c4b1b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .footer {
   margin-top: 28px;
   padding-top: 20px;

@@ -2704,30 +2704,16 @@ async function fetchTrackingFromLinketrack(trackingCode) {
 }
 
 function buildMockTracking(trackingCode) {
-  const now = Date.now();
-
   return {
     code: trackingCode,
-    service: 'Correios (demo)',
+    service: 'Correios (aguardando atualização)',
     provider: 'mock',
     events: [
       {
-        date: new Date(now - 30 * 60 * 1000).toISOString(),
-        location: 'Unidade de Distribuição - São Paulo/SP',
-        status: 'Objeto em trânsito - por favor aguarde',
-        description: 'Objeto saiu para entrega ao destinatário'
-      },
-      {
-        date: new Date(now - 26 * 60 * 60 * 1000).toISOString(),
-        location: 'Centro de Tratamento - São Paulo/SP',
-        status: 'Objeto encaminhado',
-        description: 'Encaminhado para a unidade de distribuição da sua região'
-      },
-      {
-        date: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        location: 'Agência dos Correios - Campinas/SP',
-        status: 'Objeto postado',
-        description: 'Objeto postado após o horário limite da unidade'
+        date: new Date().toISOString(),
+        location: null,
+        status: 'Aguardando movimentação oficial dos Correios',
+        description: 'Ainda não recebemos eventos para este código. Quando o pacote for registrado, você verá as atualizações aqui.'
       }
     ]
   };
