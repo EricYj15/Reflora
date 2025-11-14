@@ -8,7 +8,8 @@ const mercadopago = require('mercadopago');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
-const nodemailer = require('nodemailer');
+// const nodemailer = require('nodemailer');
+const SibApiV3Sdk = require('sib-api-v3-sdk');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 const productsSupabase = require('./db/supabase');
@@ -47,12 +48,9 @@ const RECAPTCHA_MIN_SCORE = Number(process.env.RECAPTCHA_MIN_SCORE || 0);
 const RESET_TOKEN_EXPIRATION_MINUTES = Number(process.env.RESET_TOKEN_EXPIRATION_MINUTES || 15);
 const RESET_MAX_ATTEMPTS = Number(process.env.RESET_MAX_ATTEMPTS || 5);
 const RESET_REQUEST_COOLDOWN_MINUTES = Number(process.env.RESET_REQUEST_COOLDOWN_MINUTES || 2);
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
+// SMTP config deprecated for Brevo API
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 const SMTP_FROM = process.env.SMTP_FROM || process.env.MAIL_FROM || '';
-const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
 const TRACKING_PROVIDER = String(process.env.TRACKING_PROVIDER || 'correios').toLowerCase();
 const TRACKING_CACHE_TTL_SECONDS = Number(process.env.TRACKING_CACHE_TTL_SECONDS || 180);
 const TRACKING_USER_AGENT = process.env.TRACKING_USER_AGENT || 'RefloraBackend/1.0';
@@ -374,110 +372,65 @@ function applyCoupon(code) {
 
 const SIZE_KEYS = ['PP', 'P', 'M', 'G', '36', '37', '38', '39', '40', '41', '42', '43', '44'];
 
-let mailTransporter = null;
 
 function isEmailTransportConfigured() {
-  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS && SMTP_FROM);
+  return Boolean(BREVO_API_KEY && SMTP_FROM);
 }
 
-function getMailTransporter() {
+async function sendBrevoEmail({ to, subject, text, html }) {
   if (!isEmailTransportConfigured()) {
-    return null;
+    console.info(`[Brevo] E-mail não enviado (API não configurada).`);
+    return false;
   }
-
-  if (!mailTransporter) {
-    mailTransporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS
-      }
-    });
+  try {
+    SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = BREVO_API_KEY;
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    sendSmtpEmail.sender = { email: SMTP_FROM };
+    sendSmtpEmail.to = [{ email: to }];
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.textContent = text;
+    sendSmtpEmail.htmlContent = html;
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    return true;
+  } catch (error) {
+    console.error('Erro ao enviar e-mail via Brevo API:', error);
+    return false;
   }
-
-  return mailTransporter;
 }
 
 async function sendPasswordResetEmail(recipient, code) {
-  if (!recipient || !code) {
-    return false;
-  }
-
-  if (!isEmailTransportConfigured()) {
-    console.info(`[Reset Password] Código ${code} para ${recipient} (SMTP não configurado).`);
-    return false;
-  }
-
-  try {
-    const transporter = getMailTransporter();
-    if (!transporter) {
-      return false;
-    }
-
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to: recipient,
-      subject: 'Reflora - Código de redefinição de senha',
-      text: `Olá!\n\nRecebemos um pedido para redefinir a senha da sua conta Reflora. Utilize o código abaixo dentro de ${RESET_TOKEN_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não solicitou a alteração, ignore esta mensagem.\n\nEquipe Reflora`,
-      html: `
-        <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
-          <p>Olá!</p>
-          <p>Recebemos um pedido para redefinir a senha da sua conta Reflora.</p>
-          <p>Utilize o código abaixo dentro de <strong>${RESET_TOKEN_EXPIRATION_MINUTES} minutos</strong>:</p>
-          <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #7b0f12;">${code}</p>
-          <p>Se você não solicitou a alteração, ignore esta mensagem.</p>
-          <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
-        </div>
-      `
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Erro ao enviar e-mail de redefinição de senha:', error);
-    return false;
-  }
+  if (!recipient || !code) return false;
+  const subject = 'Reflora - Código de redefinição de senha';
+  const text = `Olá!\n\nRecebemos um pedido para redefinir a senha da sua conta Reflora. Utilize o código abaixo dentro de ${RESET_TOKEN_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não solicitou a alteração, ignore esta mensagem.\n\nEquipe Reflora`;
+  const html = `
+    <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
+      <p>Olá!</p>
+      <p>Recebemos um pedido para redefinir a senha da sua conta Reflora.</p>
+      <p>Utilize o código abaixo dentro de <strong>${RESET_TOKEN_EXPIRATION_MINUTES} minutos</strong>:</p>
+      <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #7b0f12;">${code}</p>
+      <p>Se você não solicitou a alteração, ignore esta mensagem.</p>
+      <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
+    </div>
+  `;
+  return await sendBrevoEmail({ to: recipient, subject, text, html });
 }
 
 async function sendEmailVerificationEmail(recipient, code) {
-  if (!recipient || !code) {
-    return false;
-  }
-
-  if (!isEmailTransportConfigured()) {
-    console.info(`[Email Verification] Código ${code} para ${recipient} (SMTP não configurado).`);
-    return false;
-  }
-
-  try {
-    const transporter = getMailTransporter();
-    if (!transporter) {
-      return false;
-    }
-
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to: recipient,
-      subject: 'Confirme seu e-mail - Reflora',
-      text: `Olá!\n\nObrigado por criar uma conta na Reflora. Para concluir o seu cadastro, informe o código abaixo dentro de ${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não criou a conta, ignore esta mensagem.\n\nEquipe Reflora`,
-      html: `
-        <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
-          <p>Olá!</p>
-          <p>Obrigado por criar sua conta na <strong>Reflora</strong>.</p>
-          <p>Para concluir o cadastro, insira o código abaixo dentro de <strong>${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos</strong>:</p>
-          <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #1b4332;">${code}</p>
-          <p>Se você não criou essa conta, pode ignorar este e-mail.</p>
-          <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
-        </div>
-      `
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Erro ao enviar e-mail de verificação:', error);
-    return false;
-  }
+  if (!recipient || !code) return false;
+  const subject = 'Confirme seu e-mail - Reflora';
+  const text = `Olá!\n\nObrigado por criar uma conta na Reflora. Para concluir o seu cadastro, informe o código abaixo dentro de ${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos:\n\n${code}\n\nSe você não criou a conta, ignore esta mensagem.\n\nEquipe Reflora`;
+  const html = `
+    <div style="font-family: 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e1e1e;">
+      <p>Olá!</p>
+      <p>Obrigado por criar sua conta na <strong>Reflora</strong>.</p>
+      <p>Para concluir o cadastro, insira o código abaixo dentro de <strong>${EMAIL_VERIFICATION_EXPIRATION_MINUTES} minutos</strong>:</p>
+      <p style="font-size: 1.75rem; letter-spacing: 0.35rem; font-weight: 600; color: #1b4332;">${code}</p>
+      <p>Se você não criou essa conta, pode ignorar este e-mail.</p>
+      <p style="margin-top: 24px;">Com carinho,<br />Equipe Reflora</p>
+    </div>
+  `;
+  return await sendBrevoEmail({ to: recipient, subject, text, html });
 }
 
 function escapeHtml(value = '') {
