@@ -1693,53 +1693,50 @@ app.post(
     const { name, email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    const db = readUsers();
-    const pendingDb = readPendingRegistrations();
-
-    const existing = db.users.find((user) => user.email === normalizedEmail);
-    const existingPending = pendingDb.pending.find((p) => p.email === normalizedEmail);
-
-    if (existing || existingPending) {
-      return res.status(409).json({
-        success: false,
-        message: 'Este e-mail já está em uso ou aguardando confirmação. Verifique seu e-mail ou utilize outro e-mail.'
-      });
+    // Usar Supabase Auth para criar usuário
+    const { getSupabaseAdmin } = require('./db/supabase');
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return res.status(500).json({ success: false, message: 'Supabase não configurado.' });
     }
 
     try {
-      const passwordHash = await bcrypt.hash(password, 12);
-      const role = isAdminEmail(normalizedEmail) ? 'admin' : 'customer';
-      const verificationCode = generateResetCode();
-      const verificationHash = await bcrypt.hash(verificationCode, 12);
-      const verificationRecord = createVerificationRecord(verificationHash);
-      const pending = {
-        id: randomUUID(),
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordHash,
-        provider: 'local',
-        role,
-        createdAt: new Date().toISOString(),
-        emailVerification: verificationRecord
-      };
-
-      pendingDb.pending.push(pending);
-      writePendingRegistrations(pendingDb);
-
-      const dispatched = await sendEmailVerificationEmail(normalizedEmail, verificationCode);
-      if (!dispatched) {
-        console.info(`Código de verificação gerado para ${normalizedEmail}: ${verificationCode}`);
+      // Verifica se já existe usuário com esse e-mail
+      const { data: existingUser, error: fetchError } = await supabase.auth.admin.listUsers({
+        email: normalizedEmail
+      });
+      if (fetchError) {
+        throw fetchError;
       }
+      if (existingUser && existingUser.users && existingUser.users.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
+        });
+      }
+
+      // Cria usuário no Supabase Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        user_metadata: { name: name.trim() },
+        email_confirm: false
+      });
+      if (error) {
+        throw error;
+      }
+
+      // Opcional: envie e-mail de verificação manualmente se quiser
+      // await sendEmailVerificationEmail(normalizedEmail, ...)
 
       res.status(201).json({
         success: true,
         verificationRequired: true,
         email: normalizedEmail,
-        message: 'Enviamos um código de confirmação para o seu e-mail. Informe-o para finalizar o cadastro.',
-        expiresAt: verificationRecord.expiresAt
+        message: 'Usuário cadastrado! Confirme seu e-mail para ativar a conta.'
       });
     } catch (error) {
-      console.error('Erro ao registrar usuário:', error);
+      console.error('Erro ao registrar usuário no Supabase:', error);
       res.status(500).json({ success: false, message: 'Não foi possível concluir o cadastro.' });
     }
   }
