@@ -1706,9 +1706,11 @@ app.post(
         email: normalizedEmail
       });
       if (fetchError) {
-        throw fetchError;
+        console.error('Erro ao consultar usuários no Supabase:', fetchError);
+        return res.status(500).json({ success: false, message: 'Erro ao consultar usuários no Supabase.', error: fetchError.message || fetchError });
       }
       if (existingUser && existingUser.users && existingUser.users.length > 0) {
+        console.warn('Tentativa de cadastro com e-mail já existente:', normalizedEmail);
         return res.status(409).json({
           success: false,
           message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
@@ -1723,11 +1725,9 @@ app.post(
         email_confirm: false
       });
       if (error) {
-        throw error;
+        console.error('Erro ao criar usuário no Supabase:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao criar usuário no Supabase.', error: error.message || error });
       }
-
-      // Opcional: envie e-mail de verificação manualmente se quiser
-      // await sendEmailVerificationEmail(normalizedEmail, ...)
 
       res.status(201).json({
         success: true,
@@ -1736,8 +1736,8 @@ app.post(
         message: 'Usuário cadastrado! Confirme seu e-mail para ativar a conta.'
       });
     } catch (error) {
-      console.error('Erro ao registrar usuário no Supabase:', error);
-      res.status(500).json({ success: false, message: 'Não foi possível concluir o cadastro.' });
+      console.error('Erro inesperado ao registrar usuário no Supabase:', error);
+      res.status(500).json({ success: false, message: 'Erro inesperado ao registrar usuário no Supabase.', error: error.message || error });
     }
   }
 );
