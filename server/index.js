@@ -1701,23 +1701,7 @@ app.post(
     }
 
     try {
-      // Verifica se já existe usuário com esse e-mail
-      const { data: existingUser, error: fetchError } = await supabase.auth.admin.listUsers({
-        email: normalizedEmail
-      });
-      if (fetchError) {
-        console.error('Erro ao consultar usuários no Supabase:', fetchError);
-        return res.status(500).json({ success: false, message: 'Erro ao consultar usuários no Supabase.', error: fetchError.message || fetchError });
-      }
-      if (existingUser && existingUser.users && existingUser.users.length > 0) {
-        console.warn('Tentativa de cadastro com e-mail já existente:', normalizedEmail);
-        return res.status(409).json({
-          success: false,
-          message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
-        });
-      }
-
-      // Cria usuário no Supabase Auth
+      // Cria usuário no Supabase Auth (Supabase cuida do envio do e-mail de confirmação via SMTP configurado)
       const { data, error } = await supabase.auth.admin.createUser({
         email: normalizedEmail,
         password,
@@ -1725,6 +1709,13 @@ app.post(
         email_confirm: false
       });
       if (error) {
+        // Se o erro for de e-mail já existente, retorna 409
+        if (error.message && error.message.toLowerCase().includes('user already registered')) {
+          return res.status(409).json({
+            success: false,
+            message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
+          });
+        }
         console.error('Erro ao criar usuário no Supabase:', error);
         return res.status(500).json({ success: false, message: 'Erro ao criar usuário no Supabase.', error: error.message || error });
       }
