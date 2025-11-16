@@ -386,7 +386,15 @@ async function sendBrevoEmail({ to, subject, text, html }) {
     SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = BREVO_API_KEY;
     const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.sender = { email: SMTP_FROM };
+    
+    // Parse sender email - aceita "Nome <email@domain.com>" ou apenas "email@domain.com"
+    const senderMatch = SMTP_FROM.match(/^(.+?)\s*<(.+?)>$/);
+    if (senderMatch) {
+      sendSmtpEmail.sender = { name: senderMatch[1].trim(), email: senderMatch[2].trim() };
+    } else {
+      sendSmtpEmail.sender = { email: SMTP_FROM.trim() };
+    }
+    
     sendSmtpEmail.to = [{ email: to }];
     sendSmtpEmail.subject = subject;
     sendSmtpEmail.textContent = text;
@@ -796,16 +804,11 @@ async function sendOrderStatusEmail(order, status, description = '') {
   }
 
   if (!isEmailTransportConfigured()) {
-    console.info(`[Order Email] ${status} para ${order.customer.email} não enviado (SMTP não configurado).`);
+    console.info(`[Order Email] ${status} para ${order.customer.email} não enviado (Brevo não configurado).`);
     return false;
   }
 
   try {
-    const transporter = getMailTransporter();
-    if (!transporter) {
-      return false;
-    }
-
     const statusLabel = ORDER_STATUS_LABELS[status] || status;
     const template = ORDER_EMAIL_TEMPLATES[status] || ORDER_EMAIL_TEMPLATES.generic;
     const subjectFactory = template.subject || ORDER_EMAIL_TEMPLATES.generic.subject;
@@ -817,15 +820,19 @@ async function sendOrderStatusEmail(order, status, description = '') {
     const html = buildOrderEmailHtml(order, { statusLabel, intro, note });
     const text = buildOrderEmailText(order, { statusLabel, intro, note });
 
-    await transporter.sendMail({
-      from: SMTP_FROM,
+    // Enviar via Brevo API
+    const sent = await sendBrevoEmail({
       to: order.customer.email,
       subject: subjectFactory(order, statusLabel),
       text,
       html
     });
 
-    return true;
+    if (sent) {
+      console.info(`[Order Email] ${status} enviado para ${order.customer.email}`);
+    }
+
+    return sent;
   } catch (error) {
     console.error(`Erro ao enviar e-mail para status ${status} do pedido ${order?.id}:`, error);
     return false;
