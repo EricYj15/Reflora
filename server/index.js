@@ -1829,57 +1829,54 @@ app.post(
     }
 
     const normalizedEmail = normalizeEmail(req.body.email);
-    const db = readUsers();
-    const pendingDb = readPendingRegistrations();
 
-    let userIndex = db.users.findIndex((u) => u.email === normalizedEmail);
-    let isPending = false;
-    let target = null;
+    const { getSupabaseAdmin } = require('./db/supabase');
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return res.status(500).json({ success: false, message: 'Supabase não configurado.' });
+    }
 
-    if (userIndex !== -1) {
-      target = db.users[userIndex];
-    } else {
-      const pendingIndex = pendingDb.pending.findIndex((p) => p.email === normalizedEmail);
-      if (pendingIndex === -1) {
+    try {
+      // Buscar usuário pelo e-mail
+      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1,
+        email: normalizedEmail
+      });
+
+      if (listError) {
+        console.error('Erro ao listar usuários no Supabase (resend):', listError);
+        return res.status(500).json({ success: false, message: 'Erro ao buscar usuário no Supabase.' });
+      }
+
+      const user = Array.isArray(listData?.users) ? listData.users[0] : null;
+      if (!user) {
         return res.status(400).json({ success: false, message: 'E-mail não encontrado.' });
       }
-      isPending = true;
-      userIndex = pendingIndex;
-      target = pendingDb.pending[pendingIndex];
+
+      if (user.email_confirmed_at) {
+        return res.json({ success: true, message: 'E-mail já confirmado. Faça login normalmente.' });
+      }
+
+      // Reenviar link de confirmação usando o fluxo de convite
+      const redirectTo = process.env.SUPABASE_EMAIL_REDIRECT_TO || process.env.FRONTEND_URL || undefined;
+      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(normalizedEmail, {
+        redirectTo
+      });
+
+      if (inviteError) {
+        console.error('Erro ao reenviar e-mail de confirmação via Supabase:', inviteError);
+        return res.status(500).json({ success: false, message: 'Não foi possível reenviar o e-mail de confirmação.' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Enviamos um novo e-mail de confirmação. Confira sua caixa de entrada e spam.'
+      });
+    } catch (error) {
+      console.error('Erro inesperado ao reenviar e-mail de confirmação:', error);
+      return res.status(500).json({ success: false, message: 'Erro inesperado ao reenviar e-mail de confirmação.' });
     }
-
-    if (target.emailVerifiedAt && !isPending) {
-      return res.json({ success: true, message: 'E-mail já confirmado. Faça login normalmente.' });
-    }
-
-    const verification = target.emailVerification;
-
-    if (verification && !isVerificationExpired(verification) && isVerificationOnCooldown(verification)) {
-      return res.status(429).json({ success: false, message: 'Aguarde alguns minutos antes de solicitar um novo código.' });
-    }
-
-    const newCode = generateResetCode();
-    const newHash = await bcrypt.hash(newCode, 12);
-    const newRecord = createVerificationRecord(newHash);
-
-    if (isPending) {
-      pendingDb.pending[userIndex].emailVerification = newRecord;
-      writePendingRegistrations(pendingDb);
-    } else {
-      db.users[userIndex].emailVerification = newRecord;
-      writeUsers(db);
-    }
-
-    const dispatched = await sendEmailVerificationEmail(normalizedEmail, newCode);
-    if (!dispatched) {
-      console.info(`Novo código de verificação gerado para ${normalizedEmail}: ${newCode}`);
-    }
-
-    res.json({
-      success: true,
-      message: 'Enviamos um novo código para o seu e-mail.',
-      expiresAt: newRecord.expiresAt
-    });
   }
 );
 
