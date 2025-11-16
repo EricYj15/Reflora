@@ -211,6 +211,7 @@ const Header = ({
         {/* User info no menu mobile */}
         <div className={styles.mobileUserSection}>
           {user ? (
+            <>
             <div className={styles.mobileSession}>
               <div className={styles.avatar} aria-hidden>
                 {firstName?.[0]?.toUpperCase() || 'U'}
@@ -255,6 +256,7 @@ const Header = ({
                 Ir para meus pedidos
               </button>
             </div>
+            </>
           ) : (
             <button type="button" className={styles.authButton} onClick={() => { onOpenAuth(); setMenuOpen(false); }} disabled={loading}>
               {loading ? 'Carregando...' : 'Entrar / Criar conta'}
