@@ -1700,7 +1700,8 @@ app.post(
     const { name, email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    // Usar Supabase Auth (admin) para criar usuário já confirmado
+    // Usar Supabase Auth (admin) para criar usuário NÃO confirmado
+    // Supabase enviará o e-mail de confirmação usando o SMTP configurado
     const { getSupabaseAdmin } = require('./db/supabase');
     const supabase = getSupabaseAdmin();
     if (!supabase) {
@@ -1712,14 +1713,14 @@ app.post(
         email: normalizedEmail,
         password,
         user_metadata: { name: name.trim() },
-        email_confirm: true
+        email_confirm: false
       });
 
       if (error) {
         if (error.message && error.message.toLowerCase().includes('user already registered')) {
           return res.status(409).json({
             success: false,
-            message: 'Este e-mail já está em uso. Faça login ou use outro e-mail.'
+            message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
           });
         }
         console.error('Erro ao criar usuário no Supabase:', error);
@@ -1732,10 +1733,10 @@ app.post(
 
       res.status(201).json({
         success: true,
-        verificationRequired: false,
+        verificationRequired: true,
         email: normalizedEmail,
         userId: data?.user?.id || null,
-        message: 'Usuário cadastrado com sucesso. Você já pode entrar.'
+        message: 'Usuário cadastrado! Enviamos um link de confirmação para o seu e-mail.'
       });
     } catch (error) {
       console.error('Erro inesperado ao registrar usuário no Supabase:', error);
@@ -1779,7 +1780,19 @@ app.post(
         password
       });
 
-      if (error || !data?.user) {
+      if (error) {
+        const message = String(error.message || '').toLowerCase();
+        if (message.includes('email not confirmed') || message.includes('email is not confirmed')) {
+          return res.status(403).json({
+            success: false,
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Confirme seu e-mail antes de entrar.'
+          });
+        }
+        return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+      }
+
+      if (!data?.user) {
         return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
       }
 
@@ -1789,7 +1802,7 @@ app.post(
         name: data.user.user_metadata?.name || '',
         provider: 'supabase',
         role: isAdminEmail(data.user.email) ? 'admin' : 'customer',
-        emailVerifiedAt: data.user.email_confirmed_at || new Date().toISOString()
+        emailVerifiedAt: data.user.email_confirmed_at || null
       };
 
       const token = createTokenForUser(user);
