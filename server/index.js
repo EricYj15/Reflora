@@ -1699,9 +1699,8 @@ app.post(
 
     const { name, email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
+    const trimmedName = name.trim();
 
-    // Usar Supabase Auth (admin) para criar usuário NÃO confirmado
-    // Supabase enviará o e-mail de confirmação usando o SMTP configurado
     const { getSupabaseAdmin } = require('./db/supabase');
     const supabase = getSupabaseAdmin();
     if (!supabase) {
@@ -1712,15 +1711,19 @@ app.post(
       const { data, error } = await supabase.auth.admin.createUser({
         email: normalizedEmail,
         password,
-        user_metadata: { name: name.trim() },
-        email_confirm: false
+        user_metadata: { name: trimmedName },
+        email_confirm: true
       });
 
       if (error) {
         if (error.message && error.message.toLowerCase().includes('user already registered')) {
+          const pendingDbSnapshot = readPendingRegistrations();
+          const stillPending = pendingDbSnapshot.pending.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
           return res.status(409).json({
             success: false,
-            message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
+            message: stillPending
+              ? 'Este e-mail já possui um cadastro aguardando confirmação. Verifique sua caixa de entrada ou solicite um novo código.'
+              : 'Este e-mail já está em uso. Faça login ou utilize a opção de recuperar senha.'
           });
         }
         console.error('Erro ao criar usuário no Supabase:', error);
@@ -1731,12 +1734,54 @@ app.post(
         });
       }
 
+      const supabaseUserId = data?.user?.id || randomUUID();
+      const verificationCode = generateResetCode();
+      const verificationHash = await bcrypt.hash(verificationCode, 12);
+      const verificationRecord = createVerificationRecord(verificationHash);
+      const pendingDb = readPendingRegistrations();
+      const filteredPending = pendingDb.pending.filter((entry) => normalizeEmail(entry.email) !== normalizedEmail);
+      filteredPending.push({
+        email: normalizedEmail,
+        name: trimmedName,
+        supabaseUserId,
+        createdAt: new Date().toISOString(),
+        emailVerification: verificationRecord
+      });
+      writePendingRegistrations({ pending: filteredPending });
+
+      const usersDb = readUsers();
+      const nowIso = new Date().toISOString();
+      const passwordHash = await bcrypt.hash(password, 12);
+      const userIndex = usersDb.users.findIndex((user) => normalizeEmail(user.email) === normalizedEmail);
+      const userRecord = {
+        id: supabaseUserId,
+        supabaseId: supabaseUserId,
+        name: trimmedName,
+        email: normalizedEmail,
+        passwordHash,
+        provider: 'local',
+        role: isAdminEmail(normalizedEmail) ? 'admin' : 'customer',
+        createdAt: usersDb.users[userIndex]?.createdAt || nowIso,
+        updatedAt: nowIso,
+        emailVerifiedAt: null
+      };
+      if (userIndex >= 0) {
+        usersDb.users[userIndex] = { ...usersDb.users[userIndex], ...userRecord };
+      } else {
+        usersDb.users.push(userRecord);
+      }
+      writeUsers(usersDb);
+
+      const dispatched = await sendEmailVerificationEmail(normalizedEmail, verificationCode);
+      if (!dispatched) {
+        console.info(`Código de verificação gerado para ${normalizedEmail}: ${verificationCode}`);
+      }
+
       res.status(201).json({
         success: true,
         verificationRequired: true,
         email: normalizedEmail,
-        userId: data?.user?.id || null,
-        message: 'Usuário cadastrado! Enviamos um link de confirmação para o seu e-mail.'
+        message: 'Enviamos um código de confirmação para o seu e-mail.'
       });
     } catch (error) {
       console.error('Erro inesperado ao registrar usuário no Supabase:', error);
@@ -1796,18 +1841,60 @@ app.post(
         return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
       }
 
-      const user = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name || '',
-        provider: 'supabase',
-        role: isAdminEmail(data.user.email) ? 'admin' : 'customer',
-        emailVerifiedAt: data.user.email_confirmed_at || null
+      const pendingDbSnapshot = readPendingRegistrations();
+      const stillPending = pendingDbSnapshot.pending.some((entry) => normalizeEmail(entry.email) === normalizedEmail);
+      if (stillPending) {
+        return res.status(403).json({
+          success: false,
+          code: 'EMAIL_NOT_VERIFIED',
+          message: 'Confirme seu e-mail antes de entrar.'
+        });
+      }
+
+      const usersDb = readUsers();
+      let userRecord = usersDb.users.find((user) => normalizeEmail(user.email) === normalizedEmail);
+      const nowIso = new Date().toISOString();
+      if (!userRecord) {
+        userRecord = {
+          id: data.user.id,
+          supabaseId: data.user.id,
+          name: data.user.user_metadata?.name?.trim() || '',
+          email: normalizedEmail,
+          passwordHash: null,
+          provider: 'supabase',
+          role: isAdminEmail(normalizedEmail) ? 'admin' : 'customer',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          emailVerifiedAt: data.user.email_confirmed_at || nowIso
+        };
+        usersDb.users.push(userRecord);
+        writeUsers(usersDb);
+      } else {
+        const needsUpdate = !userRecord.supabaseId || userRecord.supabaseId !== data.user.id;
+        if (needsUpdate) {
+          userRecord.supabaseId = data.user.id;
+          userRecord.updatedAt = nowIso;
+          writeUsers(usersDb);
+        }
+        if (!userRecord.emailVerifiedAt && data.user.email_confirmed_at) {
+          userRecord.emailVerifiedAt = data.user.email_confirmed_at;
+          userRecord.updatedAt = nowIso;
+          writeUsers(usersDb);
+        }
+      }
+
+      const userPayload = {
+        id: userRecord.id || data.user.id,
+        email: userRecord.email,
+        name: userRecord.name || data.user.user_metadata?.name || '',
+        provider: userRecord.provider || 'supabase',
+        role: userRecord.role || (isAdminEmail(userRecord.email) ? 'admin' : 'customer'),
+        emailVerifiedAt: userRecord.emailVerifiedAt || null
       };
 
-      const token = createTokenForUser(user);
+      const token = createTokenForUser(userPayload);
 
-      res.json({ success: true, user: sanitizePublicUser(user), token });
+      res.json({ success: true, user: sanitizePublicUser(userPayload), token });
     } catch (error) {
       console.error('Erro ao efetuar login via Supabase Auth:', error);
       res.status(500).json({ success: false, message: 'Não foi possível efetuar login.' });
@@ -1829,54 +1916,161 @@ app.post(
     }
 
     const normalizedEmail = normalizeEmail(req.body.email);
+    const pendingDb = readPendingRegistrations();
+    const pendingIndex = pendingDb.pending.findIndex((entry) => normalizeEmail(entry.email) === normalizedEmail);
 
-    const { getSupabaseAdmin } = require('./db/supabase');
-    const supabase = getSupabaseAdmin();
-    if (!supabase) {
-      return res.status(500).json({ success: false, message: 'Supabase não configurado.' });
+    if (pendingIndex === -1) {
+      return res.status(400).json({ success: false, message: 'Não encontramos um cadastro pendente para este e-mail. Faça o cadastro novamente ou tente fazer login.' });
     }
 
-    try {
-      // Buscar usuário pelo e-mail
-      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-        email: normalizedEmail
+    const verification = pendingDb.pending[pendingIndex].emailVerification;
+    if (
+      verification &&
+      !isVerificationExpired(verification) &&
+      isVerificationOnCooldown(verification)
+    ) {
+      return res.status(429).json({
+        success: false,
+        message: 'Aguarde alguns minutos antes de solicitar um novo código.'
       });
-
-      if (listError) {
-        console.error('Erro ao listar usuários no Supabase (resend):', listError);
-        return res.status(500).json({ success: false, message: 'Erro ao buscar usuário no Supabase.' });
-      }
-
-      const user = Array.isArray(listData?.users) ? listData.users[0] : null;
-      if (!user) {
-        return res.status(400).json({ success: false, message: 'E-mail não encontrado.' });
-      }
-
-      if (user.email_confirmed_at) {
-        return res.json({ success: true, message: 'E-mail já confirmado. Faça login normalmente.' });
-      }
-
-      // Reenviar link de confirmação usando o fluxo de convite
-      const redirectTo = process.env.SUPABASE_EMAIL_REDIRECT_TO || process.env.FRONTEND_URL || undefined;
-      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(normalizedEmail, {
-        redirectTo
-      });
-
-      if (inviteError) {
-        console.error('Erro ao reenviar e-mail de confirmação via Supabase:', inviteError);
-        return res.status(500).json({ success: false, message: 'Não foi possível reenviar o e-mail de confirmação.' });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Enviamos um novo e-mail de confirmação. Confira sua caixa de entrada e spam.'
-      });
-    } catch (error) {
-      console.error('Erro inesperado ao reenviar e-mail de confirmação:', error);
-      return res.status(500).json({ success: false, message: 'Erro inesperado ao reenviar e-mail de confirmação.' });
     }
+
+    const newCode = generateResetCode();
+    const newHash = await bcrypt.hash(newCode, 12);
+    const newRecord = createVerificationRecord(newHash);
+    pendingDb.pending[pendingIndex].emailVerification = newRecord;
+    writePendingRegistrations(pendingDb);
+
+    const dispatched = await sendEmailVerificationEmail(normalizedEmail, newCode);
+    if (!dispatched) {
+      console.info(`Novo código de verificação gerado para ${normalizedEmail}: ${newCode}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Enviamos um novo código para o seu e-mail.',
+      expiresAt: newRecord.expiresAt
+    });
+  }
+);
+
+app.post(
+  '/api/auth/verify-email',
+  [
+    body('email').isEmail().withMessage('Informe um e-mail válido.'),
+    body('code').isLength({ min: 4 }).withMessage('Informe o código recebido por e-mail.')
+  ],
+  async (req, res) => {
+    if (!ensureJwtSecretOrRespond(res)) {
+      return;
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const providedCode = String(req.body.code || '').trim();
+    const pendingDb = readPendingRegistrations();
+    const pendingIndex = pendingDb.pending.findIndex((entry) => normalizeEmail(entry.email) === normalizedEmail);
+
+    if (pendingIndex === -1) {
+      return res.status(400).json({ success: false, message: 'Não encontramos uma confirmação pendente para este e-mail.' });
+    }
+
+    const pendingEntry = pendingDb.pending[pendingIndex];
+    const verification = pendingEntry.emailVerification;
+
+    if (!verification || isVerificationExpired(verification)) {
+      pendingDb.pending.splice(pendingIndex, 1);
+      writePendingRegistrations(pendingDb);
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    if ((verification.attempts || 0) >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
+      pendingDb.pending.splice(pendingIndex, 1);
+      writePendingRegistrations(pendingDb);
+      return res.status(400).json({ success: false, message: 'Número máximo de tentativas excedido. Solicite um novo código.' });
+    }
+
+    const matches = await bcrypt.compare(providedCode, verification.codeHash || '');
+    if (!matches) {
+      pendingEntry.emailVerification = {
+        ...verification,
+        attempts: (verification.attempts || 0) + 1
+      };
+      pendingDb.pending[pendingIndex] = pendingEntry;
+      writePendingRegistrations(pendingDb);
+      return res.status(400).json({ success: false, message: 'Código inválido ou expirado.' });
+    }
+
+    const verifiedAt = new Date().toISOString();
+    pendingDb.pending.splice(pendingIndex, 1);
+    writePendingRegistrations(pendingDb);
+
+    const usersDb = readUsers();
+    let userIndex = usersDb.users.findIndex((user) => normalizeEmail(user.email) === normalizedEmail);
+    let userRecord;
+    if (userIndex === -1) {
+      userRecord = {
+        id: pendingEntry.supabaseUserId || randomUUID(),
+        supabaseId: pendingEntry.supabaseUserId || null,
+        name: pendingEntry.name || '',
+        email: normalizedEmail,
+        passwordHash: null,
+        provider: 'local',
+        role: isAdminEmail(normalizedEmail) ? 'admin' : 'customer',
+        createdAt: verifiedAt,
+        updatedAt: verifiedAt,
+        emailVerifiedAt: verifiedAt
+      };
+      usersDb.users.push(userRecord);
+      userIndex = usersDb.users.length - 1;
+    } else {
+      userRecord = {
+        ...usersDb.users[userIndex],
+        emailVerifiedAt: verifiedAt,
+        updatedAt: verifiedAt
+      };
+      usersDb.users[userIndex] = userRecord;
+    }
+    writeUsers(usersDb);
+
+    if (pendingEntry.supabaseUserId) {
+      const { getSupabaseAdmin } = require('./db/supabase');
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        try {
+          await supabase.auth.admin.updateUserById(pendingEntry.supabaseUserId, {
+            email_confirm: true,
+            user_metadata: {
+              ...(userRecord.name ? { name: userRecord.name } : {}),
+              email_verified_reflora: true,
+              email_verified_at: verifiedAt
+            }
+          });
+        } catch (error) {
+          console.error('Falha ao atualizar Supabase após confirmação de e-mail:', error);
+        }
+      }
+    }
+
+    const token = createTokenForUser({
+      id: userRecord.id,
+      email: userRecord.email,
+      name: userRecord.name || '',
+      provider: userRecord.provider || 'local',
+      role: userRecord.role || 'customer',
+      emailVerifiedAt: userRecord.emailVerifiedAt
+    });
+
+    res.json({
+      success: true,
+      message: 'E-mail confirmado com sucesso.',
+      user: sanitizePublicUser(userRecord),
+      token
+    });
   }
 );
 
@@ -2034,6 +2228,19 @@ app.post(
     }
 
     try {
+      const { getSupabaseAdmin } = require('./db/supabase');
+      const supabase = getSupabaseAdmin();
+      const supabaseIdentifier = user.supabaseId || user.id;
+      if (supabase && supabaseIdentifier) {
+        try {
+          await supabase.auth.admin.updateUserById(supabaseIdentifier, {
+            password: newPassword
+          });
+        } catch (supabaseError) {
+          console.error('Erro ao atualizar senha no Supabase:', supabaseError);
+        }
+      }
+
       const passwordHash = await bcrypt.hash(newPassword, 12);
       user.passwordHash = passwordHash;
       user.provider = user.provider || 'local';
