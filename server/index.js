@@ -1700,7 +1700,7 @@ app.post(
     const { name, email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    // Usar Supabase Auth para criar usuário
+    // Usar Supabase Auth (admin) para criar usuário já confirmado
     const { getSupabaseAdmin } = require('./db/supabase');
     const supabase = getSupabaseAdmin();
     if (!supabase) {
@@ -1708,34 +1708,42 @@ app.post(
     }
 
     try {
-      // Cria usuário no Supabase Auth (Supabase cuida do envio do e-mail de confirmação via SMTP configurado)
       const { data, error } = await supabase.auth.admin.createUser({
         email: normalizedEmail,
         password,
         user_metadata: { name: name.trim() },
-        email_confirm: false
+        email_confirm: true
       });
+
       if (error) {
-        // Se o erro for de e-mail já existente, retorna 409
         if (error.message && error.message.toLowerCase().includes('user already registered')) {
           return res.status(409).json({
             success: false,
-            message: 'Este e-mail já está em uso. Verifique seu e-mail ou utilize outro e-mail.'
+            message: 'Este e-mail já está em uso. Faça login ou use outro e-mail.'
           });
         }
         console.error('Erro ao criar usuário no Supabase:', error);
-        return res.status(500).json({ success: false, message: 'Erro ao criar usuário no Supabase.', error: error.message || error });
+        return res.status(500).json({
+          success: false,
+          message: 'Erro ao criar usuário no Supabase.',
+          error: error.message || error
+        });
       }
 
       res.status(201).json({
         success: true,
-        verificationRequired: true,
+        verificationRequired: false,
         email: normalizedEmail,
-        message: 'Usuário cadastrado! Confirme seu e-mail para ativar a conta.'
+        userId: data?.user?.id || null,
+        message: 'Usuário cadastrado com sucesso. Você já pode entrar.'
       });
     } catch (error) {
       console.error('Erro inesperado ao registrar usuário no Supabase:', error);
-      res.status(500).json({ success: false, message: 'Erro inesperado ao registrar usuário no Supabase.', error: error.message || error });
+      res.status(500).json({
+        success: false,
+        message: 'Erro inesperado ao registrar usuário no Supabase.',
+        error: error.message || error
+      });
     }
   }
 );
@@ -1759,43 +1767,36 @@ app.post(
     const { email, password } = req.body;
     const normalizedEmail = normalizeEmail(email);
 
-    const db = readUsers();
-    const user = db.users.find((u) => u.email === normalizedEmail);
-
-    if (!user || !user.passwordHash) {
-      return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+    const { getSupabaseAdmin } = require('./db/supabase');
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return res.status(500).json({ success: false, message: 'Supabase não configurado.' });
     }
 
     try {
-      const matches = await bcrypt.compare(password, user.passwordHash);
-      if (!matches) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password
+      });
+
+      if (error || !data?.user) {
         return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
       }
 
-      if (!user.emailVerifiedAt) {
-        if (user.emailVerification) {
-          return res.status(403).json({
-            success: false,
-            code: 'EMAIL_NOT_VERIFIED',
-            message: 'Confirme seu e-mail antes de entrar.'
-          });
-        }
-
-        user.emailVerifiedAt = user.createdAt || new Date().toISOString();
-        writeUsers(db);
-      }
-
-      const role = ensureRole(user);
-      if (role !== user.role) {
-        user.role = role;
-        writeUsers(db);
-      }
+      const user = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || '',
+        provider: 'supabase',
+        role: isAdminEmail(data.user.email) ? 'admin' : 'customer',
+        emailVerifiedAt: data.user.email_confirmed_at || new Date().toISOString()
+      };
 
       const token = createTokenForUser(user);
 
       res.json({ success: true, user: sanitizePublicUser(user), token });
     } catch (error) {
-      console.error('Erro ao efetuar login:', error);
+      console.error('Erro ao efetuar login via Supabase Auth:', error);
       res.status(500).json({ success: false, message: 'Não foi possível efetuar login.' });
     }
   }
