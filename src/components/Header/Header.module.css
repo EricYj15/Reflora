@@ -174,11 +174,12 @@
 .session {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  background: rgba(255, 255, 255, 0.72);
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(95, 138, 139, 0.18);
   border-radius: 999px;
-  padding: 0.42rem 0.65rem 0.42rem 0.42rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.35rem;
+  position: relative;
 }
 
 .avatar {
@@ -206,6 +207,67 @@
   color: rgba(24, 32, 32, 0.72);
 }
 
+.profileToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.profileToggleActive {
+  filter: drop-shadow(0 4px 16px rgba(91, 12, 15, 0.18));
+}
+
+.profileLink {
+  font-size: 0.72rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.logoutArea {
+  display: flex;
+  align-items: center;
+  margin-left: 0.25rem;
+}
+
+.confirmLogout,
+.confirmLogoutInline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: rgba(24, 32, 32, 0.8);
+}
+
+.confirmActions {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.confirmCancel,
+.confirmAccept {
+  border: none;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.65rem;
+  cursor: pointer;
+}
+
+.confirmCancel {
+  background: rgba(91, 12, 15, 0.08);
+  color: var(--wine);
+}
+
+.confirmAccept {
+  background: var(--wine);
+  color: #fff;
+}
+
 .authLink {
   background: none;
   border: none;
@@ -230,6 +292,103 @@
   padding: 0.2rem 0.45rem;
   border-radius: 999px;
   margin-top: 0.25rem;
+}
+
+.profilePanel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(320px, calc(100vw - 2rem));
+  padding: 1.2rem;
+  background: #fffdf8;
+  border: 1px solid rgba(95, 138, 139, 0.18);
+  border-radius: 20px;
+  box-shadow: 0 16px 42px rgba(35, 27, 21, 0.18);
+  animation: fadeIn 0.25s ease;
+  z-index: 95;
+}
+
+.profilePanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.profilePanelAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.profilePanelTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.profilePanelEmail {
+  font-size: 0.82rem;
+  color: rgba(24, 32, 32, 0.7);
+}
+
+.profilePanelMessage {
+  font-size: 0.85rem;
+  color: rgba(24, 32, 32, 0.75);
+  margin-bottom: 1rem;
+}
+
+.profileStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.profileStat {
+  padding: 0.6rem;
+  border-radius: 12px;
+  background: rgba(91, 12, 15, 0.05);
+}
+
+.profileStatLabel {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(24, 32, 32, 0.65);
+  margin-bottom: 0.2rem;
+}
+
+.profileActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profileActionPrimary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profileActionGhost {
+  border: 1px solid rgba(91, 12, 15, 0.2);
+  background: transparent;
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  color: var(--wine);
+  cursor: pointer;
 }
 
 .link {
@@ -475,5 +634,43 @@
 
   .authButton {
     padding: 0.45rem 0.85rem;
+  }
+
+  .mobileProfileCard {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(123, 15, 18, 0.06);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .mobileProfileTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--wine);
+    margin: 0;
+  }
+
+  .mobileProfileEmail {
+    font-size: 0.85rem;
+    color: rgba(24, 32, 32, 0.75);
+  }
+
+  .mobileProfileMessage {
+    font-size: 0.85rem;
+    color: rgba(24, 32, 32, 0.75);
+  }
+
+  .mobileProfileAction {
+    margin-top: 0.25rem;
+    border: none;
+    border-radius: 12px;
+    padding: 0.55rem 1rem;
+    font-weight: 600;
+    background: var(--wine);
+    color: #fff;
+    cursor: pointer;
   }
 }

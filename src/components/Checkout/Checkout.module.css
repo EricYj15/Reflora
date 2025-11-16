@@ -2,7 +2,7 @@
 
 .checkoutSection {
   padding: clamp(3rem, 7vw, 5rem) 1.5rem;
-  background-color: var(--petal);
+  background: linear-gradient(180deg, #ffffff 0%, #fff9f5 45%, #ffffff 100%);
 }
 
 .container {
@@ -25,7 +25,7 @@
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.3em;
-  color: var(--primary);
+  color: rgba(35, 27, 21, 0.65);
   margin: 0 0 0.5rem;
 }
 
@@ -75,11 +75,8 @@
 }
 
 .summaryCard {
-  background: var(--surface);
-  border-radius: 18px;
-  padding: 1.5rem;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(95, 138, 139, 0.12);
+  border-radius: 22px;
+  padding: 1.75rem;
   display: grid;
   gap: 1.25rem;
 }
@@ -178,12 +175,20 @@
   gap: clamp(2rem, 4vw, 3rem);
 }
 
+.form,
+.summaryCard,
+.mpCard,
+.pixCard,
+.placeholderCard,
+.ordersPanel {
+  background: #ffffff;
+  border: 1px solid rgba(35, 27, 21, 0.08);
+  box-shadow: 0 24px 60px rgba(35, 27, 21, 0.07);
+}
+
 .form {
-  background: var(--surface);
-  border-radius: 20px;
-  padding: clamp(1.5rem, 3vw, 2rem);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(95, 138, 139, 0.1);
+  border-radius: 24px;
+  padding: clamp(1.5rem, 3vw, 2.4rem);
   display: grid;
   gap: 1.5rem;
 }
@@ -341,9 +346,9 @@
 }
 
 .shippingInfoBox {
-  background: rgba(95, 138, 139, 0.08);
-  border: 1px dashed rgba(95, 138, 139, 0.24);
-  border-radius: 16px;
+  background: rgba(35, 27, 21, 0.03);
+  border: 1px solid rgba(35, 27, 21, 0.08);
+  border-radius: 18px;
   padding: 1rem 1.1rem;
   display: grid;
   gap: 0.5rem;
@@ -354,11 +359,11 @@
 .shippingInfoContent {
   display: grid;
   gap: 0.4rem;
+}
 
 .shippingCalculateBox {
   display: grid;
   gap: 0.6rem;
-}
 }
 
 .shippingInfoContent p {
@@ -366,6 +371,10 @@
 }
 
 .shippingEstimate {
+  font-size: 0.85rem;
+  color: rgba(46, 46, 43, 0.7);
+}
+
 .calculateButton {
   justify-self: start;
   padding: 0.7rem 1.3rem;
@@ -391,14 +400,10 @@
   cursor: progress;
 }
 
-  font-size: 0.85rem;
-  color: rgba(46, 46, 43, 0.7);
-}
-
 .shippingInfoHint {
   margin: 0;
   font-size: 0.86rem;
-  color: rgba(46, 46, 43, 0.72);
+  color: rgba(46, 46, 43, 0.78);
 }
 
 .shippingError {
@@ -443,9 +448,9 @@
   display: grid;
   gap: 0.5rem;
   padding: 1rem 1.2rem;
-  border-radius: 12px;
-  border: 1px dashed rgba(95, 138, 139, 0.35);
-  background: rgba(95, 138, 139, 0.08);
+  border-radius: 16px;
+  border: 1px solid rgba(35, 27, 21, 0.08);
+  background: rgba(35, 27, 21, 0.03);
   font-family: 'Montserrat', sans-serif;
   color: rgba(46, 46, 43, 0.75);
 }
@@ -459,7 +464,7 @@
   padding: 0.5rem 1.1rem;
   border-radius: 999px;
   border: none;
-  background: var(--primary);
+  background: var(--wine);
   color: #fff;
   font-family: 'Montserrat', sans-serif;
   font-weight: 600;
@@ -469,8 +474,8 @@
 }
 
 .authCalloutButton:hover {
-  background: #4f7373;
-  box-shadow: 0 8px 18px rgba(95, 138, 139, 0.24);
+  background: #5e1014;
+  box-shadow: 0 8px 18px rgba(123, 15, 18, 0.24);
   transform: translateY(-1px);
 }
 
@@ -506,11 +511,8 @@
 .pixCard,
 .placeholderCard,
 .mpCard {
-  background-color: var(--surface);
-  border-radius: 24px;
+  border-radius: 26px;
   padding: 2rem;
-  box-shadow: 0 20px 50px rgba(36, 30, 24, 0.08);
-  border: 2px solid rgba(36, 30, 24, 0.06);
   display: grid;
   gap: 1.25rem;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -636,9 +638,7 @@
 }
 
 .ordersPanel {
-  background: rgba(255, 255, 255, 0.7);
   border-radius: 20px;
-  border: 1px solid rgba(95, 138, 139, 0.1);
   padding: 1.25rem;
   display: grid;
   gap: 1rem;
@@ -646,8 +646,8 @@
 
 .toggleOrders {
   border: none;
-  background: rgba(95, 138, 139, 0.12);
-  color: var(--primary);
+  background: rgba(35, 27, 21, 0.05);
+  color: var(--wine);
   border-radius: 999px;
   padding: 0.65rem 1rem;
   font-family: 'Montserrat', sans-serif;
