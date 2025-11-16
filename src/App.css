@@ -9,11 +9,11 @@
   --surface: #fffdf8; /* cartões claros */
   --ink: #231b15; /* texto principal */
   --muted-ink: #5d4f45; /* texto secundário */
-  --primary: #5b7c60; /* verde folhagem */
-  --wine: #b45c47; /* terracota de flores secas */
-  --accent: #d68b5f; /* destaque cerâmico */
-  --sage: #7a9b76;
-  --moss: #3f5c45;
+  --primary: #7b0f12; /* vermelho vivo clássico Reflora */
+  --wine: #5a070a; /* vinho profundo para contrastes */
+  --accent: #c63a32; /* destaque quente para CTAs */
+  --sage: #d69b90; /* tons suaves para fundos */
+  --moss: #5c1113; /* tom escuro para hovers */
   --petal: #f3d9ca;
   --petal-strong: #e8b8a0;
   --border: #e4d9cf;
@@ -79,14 +79,14 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #d9cec3;
+  background: #e7d4cd;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #8ea58e;
+  background: #b86155;
   border-radius: 6px;
 }
 
 /* Selection Color */
-::selection { background: rgba(212, 139, 95, 0.25); color: var(--ink); }
-::-moz-selection { background: rgba(212, 139, 95, 0.25); color: var(--ink); }
+::selection { background: rgba(123, 15, 18, 0.2); color: var(--ink); }
+::-moz-selection { background: rgba(123, 15, 18, 0.2); color: var(--ink); }
