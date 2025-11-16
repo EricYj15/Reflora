@@ -1,6 +1,6 @@
 // FILE: src/components/ProductModal/ProductModal.js
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styles from './ProductModal.module.css';
 
 const ProductModal = ({ product, onClose, onAddToCart }) => {
@@ -40,6 +40,28 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
   // Navegação por miniaturas (sem setas para evitar vibe de slideshow)
 
   if (!product) return null;
+
+  const isExclusive = Boolean(product.isExclusive);
+  const parsedStock = Number(product.stock);
+  const stock = Number.isFinite(parsedStock) ? parsedStock : (isExclusive ? 1 : 0);
+  const outOfStock = stock <= 0;
+
+  const stockStatus = useMemo(() => {
+    if (outOfStock) {
+      return 'Esgotado no momento';
+    }
+
+    return isExclusive ? 'Estoque único (1 unidade)' : `Estoque: ${stock}`;
+  }, [isExclusive, outOfStock, stock]);
+
+  const handleAddToCart = () => {
+    if (outOfStock) {
+      return;
+    }
+
+    onAddToCart?.();
+    onClose?.();
+  };
 
   return (
     <div 
@@ -88,13 +110,21 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
             <h2 id="modal-title" className={styles.title}>{product.name}</h2>
             <p className={styles.price}>{product.price}</p>
             <p className={styles.description}>{product.description}</p>
+
+            <div className={styles.metaInfo}>
+              {isExclusive && <span className={styles.exclusiveBadge}>Peça exclusiva</span>}
+              <p className={`${styles.stockStatus} ${outOfStock ? styles.stockOut : ''}`}>{stockStatus}</p>
+            </div>
             
             <div className={styles.actions}>
-              <button className={`${styles.purchaseButton} ${styles.primary}`} onClick={() => {
-                onAddToCart();
-                onClose();
-              }}>
-                Adicionar ao carrinho
+              <button
+                type="button"
+                className={`${styles.purchaseButton} ${styles.primary}`}
+                onClick={handleAddToCart}
+                disabled={outOfStock}
+                aria-disabled={outOfStock}
+              >
+                {outOfStock ? 'Esgotado' : 'Adicionar ao carrinho'}
               </button>
             </div>
           </div>

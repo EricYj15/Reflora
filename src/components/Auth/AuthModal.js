@@ -868,7 +868,6 @@ const AuthModal = ({ open, onClose }) => {
                     onError={() => {
                       setError('Não foi possível conectar ao Google. Tente novamente.');
                     }}
-                    useOneTap
                     theme="outline"
                     width="100%"
                     size="large"

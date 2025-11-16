@@ -176,6 +176,36 @@
   opacity: 0.9;
 }
 
+.metaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.exclusiveBadge {
+  align-self: flex-start;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(123, 15, 18, 0.08);
+  color: var(--wine);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+
+.stockStatus {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  color: var(--muted-ink);
+  margin: 0;
+}
+
+.stockOut {
+  color: #b42318;
+  font-weight: 600;
+}
+
 .purchaseButton {
   font-family: 'Montserrat', sans-serif;
   background: #F3F4F3;
@@ -197,6 +227,15 @@
 .purchaseButton:hover { background: #EDEEEB; box-shadow: var(--shadow); }
 
 .purchaseButton:focus { outline: 2px solid rgba(95, 138, 139, 0.6); outline-offset: 4px; }
+
+.purchaseButton:disabled,
+.purchaseButton[aria-disabled="true"] {
+  background: #dcded9;
+  border-color: #c6c9c0;
+  color: #7a7f73;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 .primary { background: var(--wine); color: #fff; border-color: var(--wine); }
 .primary:hover { background: #5e0b0d; }

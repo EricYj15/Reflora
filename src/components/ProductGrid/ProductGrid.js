@@ -15,11 +15,11 @@ const normalizeProduct = (product) => {
   }
 
   const stockValue = Number(product.stock);
-  let stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : 0;
+  let stock = Number.isFinite(stockValue) && stockValue >= 0 ? stockValue : null;
 
   const isExclusive = Boolean(product.isExclusive);
-  if (isExclusive && stock <= 0) {
-    stock = 1;
+  if (stock === null) {
+    stock = isExclusive ? 1 : 0;
   }
 
   const sizes = SIZE_KEYS.reduce((acc, size) => {
