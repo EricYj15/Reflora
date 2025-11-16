@@ -1929,9 +1929,16 @@ app.post(
       !isVerificationExpired(verification) &&
       isVerificationOnCooldown(verification)
     ) {
+      const issuedAt = Date.parse(verification.issuedAt);
+      const cooldownDurationMs = EMAIL_VERIFICATION_COOLDOWN_MINUTES * 60 * 1000;
+      const nextAllowedAt = Number.isNaN(issuedAt) ? Date.now() + cooldownDurationMs : issuedAt + cooldownDurationMs;
+      const remainingMs = Math.max(0, nextAllowedAt - Date.now());
+      const remainingSeconds = Math.ceil(remainingMs / 1000);
       return res.status(429).json({
         success: false,
-        message: 'Aguarde alguns minutos antes de solicitar um novo código.'
+        message: 'Aguarde alguns minutos antes de solicitar um novo código.',
+        cooldownSeconds: remainingSeconds,
+        nextAvailableAt: new Date(nextAllowedAt).toISOString()
       });
     }
 
@@ -1946,10 +1953,17 @@ app.post(
       console.info(`Novo código de verificação gerado para ${normalizedEmail}: ${newCode}`);
     }
 
+    const cooldownDurationSeconds = EMAIL_VERIFICATION_COOLDOWN_MINUTES * 60;
+    const cooldownDurationMs = cooldownDurationSeconds * 1000;
+    const issuedAt = Date.parse(newRecord.issuedAt);
+    const nextAvailableAt = Number.isNaN(issuedAt) ? Date.now() + cooldownDurationMs : issuedAt + cooldownDurationMs;
+
     res.json({
       success: true,
       message: 'Enviamos um novo código para o seu e-mail.',
-      expiresAt: newRecord.expiresAt
+      expiresAt: newRecord.expiresAt,
+      cooldownSeconds: cooldownDurationSeconds,
+      nextAvailableAt: new Date(nextAvailableAt).toISOString()
     });
   }
 );

@@ -40,6 +40,13 @@ const initialForgotForm = {
 const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY || '';
 const recaptchaEnabled = Boolean(recaptchaSiteKey);
 
+const formatSeconds = (totalSeconds) => {
+  const safeSeconds = Math.max(0, Number.isFinite(totalSeconds) ? totalSeconds : 0);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
 const AuthModal = ({ open, onClose }) => {
   const {
     login,
@@ -65,10 +72,13 @@ const AuthModal = ({ open, onClose }) => {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resendAvailableAt, setResendAvailableAt] = useState(null);
+  const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const [registerCaptchaToken, setRegisterCaptchaToken] = useState('');
   const [forgotCaptchaToken, setForgotCaptchaToken] = useState('');
   const registerRecaptchaRef = useRef(null);
   const forgotRecaptchaRef = useRef(null);
+  const pointerDownOnBackdrop = useRef(false);
 
   useEffect(() => {
     if (!open) {
@@ -77,10 +87,12 @@ const AuthModal = ({ open, onClose }) => {
       setRegisterForm(initialRegisterForm);
       setForgotForm(initialForgotForm);
       setForgotStep(ForgotStep.REQUEST);
-    setVerificationForm({ email: '', code: '' });
+      setVerificationForm({ email: '', code: '' });
       setError('');
       setInfo('');
       setSubmitting(false);
+      setResendAvailableAt(null);
+      setResendSecondsLeft(0);
       setRegisterCaptchaToken('');
       setForgotCaptchaToken('');
       if (registerRecaptchaRef.current) {
@@ -92,10 +104,19 @@ const AuthModal = ({ open, onClose }) => {
     }
   }, [open]);
 
-  const handleBackdropClick = (event) => {
-    if (event.target === event.currentTarget) {
+  const handleBackdropMouseDown = (event) => {
+    pointerDownOnBackdrop.current = event.target === event.currentTarget;
+  };
+
+  const handleBackdropMouseUp = (event) => {
+    if (pointerDownOnBackdrop.current && event.target === event.currentTarget) {
       onClose?.();
     }
+    pointerDownOnBackdrop.current = false;
+  };
+
+  const handleBackdropMouseLeave = () => {
+    pointerDownOnBackdrop.current = false;
   };
 
   const handleKeyDown = useCallback((event) => {
@@ -118,6 +139,25 @@ const AuthModal = ({ open, onClose }) => {
     const { name, value } = event.target;
     formSetter((prev) => ({ ...prev, [name]: value }));
   };
+
+  useEffect(() => {
+    if (!resendAvailableAt) {
+      setResendSecondsLeft(0);
+      return undefined;
+    }
+
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+      setResendSecondsLeft(remaining);
+      if (remaining <= 0) {
+        setResendAvailableAt(null);
+      }
+    };
+
+    updateCountdown();
+    const intervalId = setInterval(updateCountdown, 1000);
+    return () => clearInterval(intervalId);
+  }, [resendAvailableAt]);
 
   const runWithFeedback = async (fn, { closeOnSuccess = true } = {}) => {
     setSubmitting(true);
@@ -246,6 +286,22 @@ const AuthModal = ({ open, onClose }) => {
     }
   }, [activeView]);
 
+  const headerDescription = useMemo(() => {
+    switch (activeView) {
+      case View.REGISTER:
+        return 'Crie sua conta Reflora para acompanhar pedidos e aproveitar novidades.';
+      case View.FORGOT:
+        return 'Enviaremos um código seguro para que você defina uma nova senha.';
+      case View.VERIFY:
+        return 'Confirme o endereço de e-mail para concluir seu cadastro com segurança.';
+      case View.LOGIN:
+      default:
+        return 'Entre com seus dados para continuar comprando com toda a segurança.';
+    }
+  }, [activeView]);
+
+  const showPrimaryTabs = activeView === View.LOGIN || activeView === View.REGISTER;
+
   const handleForgotBack = () => {
     setForgotNewPasswordVisible(false);
     setForgotConfirmPasswordVisible(false);
@@ -369,6 +425,10 @@ const AuthModal = ({ open, onClose }) => {
       return;
     }
 
+    if (resendSecondsLeft > 0) {
+      return;
+    }
+
     const email = verificationForm.email.trim();
 
     if (!email) {
@@ -383,22 +443,73 @@ const AuthModal = ({ open, onClose }) => {
       );
       setInfo(result?.message || 'Enviamos um novo código para o seu e-mail.');
       setVerificationForm((prev) => ({ ...prev, code: '' }));
+      const cooldownSeconds = Number(result?.cooldownSeconds);
+      if (cooldownSeconds > 0) {
+        const nextTimestamp = result?.nextAvailableAt ? Date.parse(result.nextAvailableAt) : NaN;
+        const base = Number.isNaN(nextTimestamp) ? Date.now() + cooldownSeconds * 1000 : nextTimestamp;
+        setResendAvailableAt(base);
+      }
     } catch (err) {
+      const cooldownSeconds = Number(err?.payload?.cooldownSeconds);
+      if (cooldownSeconds > 0) {
+        const nextTimestamp = err?.payload?.nextAvailableAt ? Date.parse(err.payload.nextAvailableAt) : NaN;
+        const base = Number.isNaN(nextTimestamp) ? Date.now() + cooldownSeconds * 1000 : nextTimestamp;
+        setResendAvailableAt(base);
+      }
       // mensagem tratada em runWithFeedback
     }
   };
 
+  const resendButtonDisabled = submitting || resendSecondsLeft > 0;
+  const resendButtonLabel = resendSecondsLeft > 0
+    ? `Reenviar em ${formatSeconds(resendSecondsLeft)}`
+    : 'Reenviar código';
+
   return (
-    <div className={classNames(styles.backdrop, { [styles.open]: open })} role="dialog" aria-modal="true" onClick={handleBackdropClick}>
-      <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
+    <div
+      className={classNames(styles.backdrop, { [styles.open]: open })}
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={handleBackdropMouseDown}
+      onMouseUp={handleBackdropMouseUp}
+      onMouseLeave={handleBackdropMouseLeave}
+    >
+      <div className={styles.modal}>
         <header className={styles.header}>
-          <h2>{title}</h2>
+          <div>
+            <p className={styles.subtitle}>Bem-vinda à Reflora</p>
+            <h2>{title}</h2>
+            <p className={styles.headerDescription}>{headerDescription}</p>
+          </div>
           <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Fechar modal de autenticação">
             ×
           </button>
         </header>
 
         <div className={styles.content}>
+          {showPrimaryTabs && (
+            <div className={styles.tabs} role="tablist" aria-label="Alternar entre login e cadastro">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeView === View.LOGIN}
+                className={classNames(styles.tabButton, { [styles.tabButtonActive]: activeView === View.LOGIN })}
+                onClick={() => goToView(View.LOGIN)}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeView === View.REGISTER}
+                className={classNames(styles.tabButton, { [styles.tabButtonActive]: activeView === View.REGISTER })}
+                onClick={() => goToView(View.REGISTER)}
+              >
+                Criar conta
+              </button>
+            </div>
+          )}
+
           {error && <div className={styles.error}>{error}</div>}
           {info && <div className={styles.info}>{info}</div>}
 
@@ -578,11 +689,17 @@ const AuthModal = ({ open, onClose }) => {
                   type="button"
                   className={styles.linkButton}
                   onClick={handleResendVerification}
-                  disabled={submitting}
+                  disabled={resendButtonDisabled}
                 >
-                  Reenviar código
+                  {resendButtonLabel}
                 </button>
               </div>
+
+              {resendSecondsLeft > 0 && (
+                <p className={styles.cooldownHint}>
+                  Você poderá solicitar um novo código em {formatSeconds(resendSecondsLeft)}.
+                </p>
+              )}
 
               <button
                 type="submit"

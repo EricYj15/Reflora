@@ -104,15 +104,15 @@
 .couponApplied {
   margin: 1.5rem 0;
   padding: 1.25rem;
-  background: linear-gradient(135deg, rgba(95, 138, 139, 0.08) 0%, rgba(95, 138, 139, 0.05) 100%);
-  border: 2px solid rgba(95, 138, 139, 0.3);
+  background-color: var(--petal);
+  border: 2px solid rgba(91, 124, 96, 0.35);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 12px rgba(95, 138, 139, 0.12);
+  box-shadow: 0 4px 12px rgba(36, 30, 24, 0.1);
 }
 
 @keyframes slideIn {

@@ -1,13 +1,16 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(24, 24, 24, 0.35);
+  background: rgba(7, 12, 18, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
+  padding: 1.5rem;
   z-index: 200;
 }
 
@@ -17,19 +20,29 @@
 }
 
 .modal {
-  background: #fff;
-  width: min(100%, 420px);
-  border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(14, 33, 33, 0.22);
-  padding: clamp(1.5rem, 4vw, 2rem);
+  background: #ffffff;
+  width: min(100%, 460px);
+  border-radius: 20px;
+  box-shadow: 0 40px 90px rgba(7, 28, 39, 0.35);
+  padding: clamp(1.6rem, 4vw, 2.3rem);
   position: relative;
+  border: 1px solid rgba(8, 29, 38, 0.08);
 }
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.4rem;
+  gap: 1rem;
+}
+
+.subtitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .header h2 {
@@ -39,14 +52,22 @@
   color: var(--ink);
 }
 
+.headerDescription {
+  margin: 0.4rem 0 0;
+  color: rgba(12, 20, 25, 0.72);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
 .closeButton {
   border: none;
   background: none;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
   color: rgba(0, 0, 0, 0.45);
   transition: transform 0.2s ease;
+  padding: 0.2rem;
 }
 
 .closeButton:hover {
@@ -56,7 +77,39 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
+}
+
+.tabs {
+  background: rgba(8, 22, 33, 0.04);
+  border-radius: 999px;
+  padding: 0.2rem;
+  display: flex;
+  gap: 0.2rem;
+}
+
+.tabButton {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.45rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(15, 36, 41, 0.6);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tabButtonActive {
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(5, 24, 33, 0.12);
+  color: var(--ink);
+}
+
+.tabButton:focus-visible {
+  outline: 2px solid rgba(123, 15, 18, 0.4);
+  outline-offset: 2px;
 }
 
 .error {
@@ -140,21 +193,24 @@
   color: rgba(0, 0, 0, 0.6);
 }
 
+
 .submitButton {
   margin-top: 0.5rem;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--wine) 100%);
+  background-color: var(--primary);
   color: #fff;
   border: none;
   border-radius: 999px;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 26px rgba(12, 43, 27, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .submitButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(123, 15, 18, 0.25);
+  box-shadow: 0 18px 32px rgba(12, 43, 27, 0.22);
+  background-color: var(--moss);
 }
 
 .submitButton:disabled {
@@ -167,15 +223,24 @@
   background: none;
   border: none;
   color: var(--primary);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   text-align: left;
   padding: 0;
   cursor: pointer;
   align-self: flex-start;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.linkButton:hover {
+.linkButton:hover:not(:disabled) {
   text-decoration: underline;
+}
+
+.linkButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .captchaWrapper {
@@ -202,6 +267,42 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+}
+
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.countdownValue {
+
+.headerDescription,
+.info,
+.error,
+.passwordHint,
+.cooldownHint {
+  text-wrap: pretty;
+}
+  font-weight: 600;
+}
+
+.cooldownHint {
+    border-radius: 18px;
+    padding: 1.25rem;
+  color: rgba(0, 0, 0, 0.6);
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tabs {
+    border-radius: 16px;
+  }
+  margin-top: 0.25rem;
 }
 
 .divider {

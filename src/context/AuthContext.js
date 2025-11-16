@@ -70,6 +70,7 @@ async function requestJson(url, options = {}) {
     const error = new Error(message);
     error.status = response.status;
     error.details = data.errors;
+    error.payload = data;
     throw error;
   }
 

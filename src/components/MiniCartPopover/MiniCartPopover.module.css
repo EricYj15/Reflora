@@ -197,8 +197,8 @@
   letter-spacing: 0.05em;
   cursor: pointer;
   color: #fff;
-  background: linear-gradient(135deg, rgba(4, 145, 87, 0.95), rgba(0, 122, 92, 0.95));
-  box-shadow: 0 14px 30px rgba(0, 122, 92, 0.28);
+  background-color: var(--primary);
+  box-shadow: 0 14px 30px rgba(30, 72, 46, 0.28);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

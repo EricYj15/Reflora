@@ -5,16 +5,20 @@
 
 /* Theme Tokens */
 :root {
-  --bg: #FAFAF8; /* fundo claro e delicado */
-  --surface: #FFFFFF; /* cartões/superfícies */
-  --ink: #2E2E2B; /* texto principal */
-  --muted-ink: #5A5A54; /* texto secundário */
-  --primary: #5F8A8B; /* Verde/azulado da sua logo */
-  --wine: #7B0F12; /* vinho profundo derivado da sua logo */
-  --accent: var(--wine);
-  --border: #E7E7E2; /* bordas suaves */
-  --shadow: 0 6px 24px rgba(0,0,0,0.06);
-  --radius: 12px;
+  --bg: #f6f1ec; /* fundo reciclado em tom papel */
+  --surface: #fffdf8; /* cartões claros */
+  --ink: #231b15; /* texto principal */
+  --muted-ink: #5d4f45; /* texto secundário */
+  --primary: #5b7c60; /* verde folhagem */
+  --wine: #b45c47; /* terracota de flores secas */
+  --accent: #d68b5f; /* destaque cerâmico */
+  --sage: #7a9b76;
+  --moss: #3f5c45;
+  --petal: #f3d9ca;
+  --petal-strong: #e8b8a0;
+  --border: #e4d9cf;
+  --shadow: 0 18px 50px rgba(25, 20, 16, 0.08);
+  --radius: 16px;
 }
 
 /* App Container */
@@ -75,14 +79,14 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #3a5f60;
+  background: #d9cec3;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #BFD0D0; /* tom claro do verde */
+  background: #8ea58e;
   border-radius: 6px;
 }
 
 /* Selection Color */
-::selection { background: rgba(123, 15, 18, 0.12); color: var(--ink); }
-::-moz-selection { background: rgba(123, 15, 18, 0.12); color: var(--ink); }
+::selection { background: rgba(212, 139, 95, 0.25); color: var(--ink); }
+::-moz-selection { background: rgba(212, 139, 95, 0.25); color: var(--ink); }

@@ -32,7 +32,7 @@
   transform: translateX(-50%);
   width: 80px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(123, 15, 18, 0.45), transparent);
+  background-color: var(--wine);
 }
 
 .title {
@@ -83,7 +83,7 @@
   transform: translateX(-50%);
   width: 80px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(123, 15, 18, 0.45), transparent);
+  background-color: var(--wine);
 }
 
 /* Responsive */

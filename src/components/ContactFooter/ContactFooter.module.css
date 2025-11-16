@@ -1,9 +1,10 @@
 /* FILE: src/components/ContactFooter/ContactFooter.module.css */
 
 .footer {
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.05) 100%);
+  background-color: var(--surface);
   padding: 6rem 2rem 3rem;
   margin-top: 6rem;
+  border-top: 1px solid rgba(35, 27, 21, 0.08);
 }
 
 .container {
