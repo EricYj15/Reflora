@@ -842,7 +842,7 @@ const AuthModal = ({ open, onClose }) => {
             </form>
           )}
 
-          {activeView === View.LOGIN && (
+          {(activeView === View.LOGIN || activeView === View.REGISTER) && (
             <>
               <div className={styles.divider}>
                 <span>ou</span>
@@ -871,7 +871,7 @@ const AuthModal = ({ open, onClose }) => {
                     theme="outline"
                     width="100%"
                     size="large"
-                    text="continue_with"
+                    text={activeView === View.REGISTER ? 'signup_with' : 'continue_with'}
                   />
                 </div>
               ) : (
