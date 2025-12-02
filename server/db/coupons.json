@@ -8,9 +8,22 @@
       "freeShipping": true,
       "active": true,
       "expiresAt": null,
-      "usageLimit": null,
+      "usageLimit": 10,
       "usageCount": 0,
       "createdAt": "2025-10-29T00:00:00.000Z"
+    },
+    {
+      "code": "TEIA10",
+      "type": "percentage",
+      "description": "10% OFF para quem assistir à apresentação TEIA",
+      "discount": 0,
+      "discountPercent": 10,
+      "freeShipping": false,
+      "active": true,
+      "expiresAt": "2025-12-31T23:59:59.000Z",
+      "usageLimit": null,
+      "usageCount": 0,
+      "createdAt": "2025-12-01T00:00:00.000Z"
     }
   ]
 }
